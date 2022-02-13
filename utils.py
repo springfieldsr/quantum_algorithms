@@ -2,17 +2,21 @@ import cirq
 import numpy as np
 
 def construct_oracle_matrix(f, n, helper_bits):
+    
     m = n + helper_bits
     oracle = np.zeros((2**m ,2**m))
 
     for i in range(2**m):
-        binary = bin(i)
-        output = f(binary[:-1])
-        if output == 1:
-            binary[-1] = str(1 - int(binary[-1]))
+        binary = "{0:b}".format(i)
+        padding = "0" * (m - len(binary))
+        binary = padding + binary
+
+        output = f(binary[:n])
+        binary = binary[:n] + "".join([str((int(binary[n + i]) + int(output[i])) % 2) for i in range(helper_bits)])
         oracle[i][int(binary, 2)] = 1
     
     return oracle
+
 
 class Oracle(cirq.Gate):
     def __init__(self, f, n, helper_bits):

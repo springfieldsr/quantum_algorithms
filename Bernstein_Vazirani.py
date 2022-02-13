@@ -1,6 +1,6 @@
 import cirq
 
-from oracle import Oracle
+from utils import Oracle
 from cirq import Simulator
 from Deutsch_Jozsa import deutsch_jozsa_circuit
 
@@ -15,6 +15,6 @@ def bernstein_vazirani_solver(f, n):
 
     measurements = result.data.values.tolist()[0]
     a = "".join([str(i) for i in measurements])
-    b = str(f(a))
+    b = str(f("0"))
 
     return a, b

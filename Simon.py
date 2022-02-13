@@ -1,7 +1,7 @@
 import cirq
 import numpy as np
 
-from oracle import Oracle
+from utils import Oracle
 from cirq import Simulator
 
 def simon_circuit(f, n):
@@ -23,27 +23,33 @@ def simon_circuit(f, n):
 
 
 def simon_solver(f, n):
-    y_list = []
     circuit = simon_circuit(f, n)
     simulator = Simulator()
 
     s = None
-    for iter in range(20):
+    for _ in range(100):
+        y_list = []
         for i in range(n - 1):
             result = simulator.run(circuit)
             measurements = result.data.values.tolist()[0]
             y_list.append(measurements)
         
-        y_list = np.array(y_list)
-        zeros = np.zeros(n - 1)
+        if len(y_list) != set(tuple(row) for row in y_list):
+            continue
         try:
-            s = np.linalg.solve(y_list, zeros)
-            if sum(s) != 0:
-                return s
+            for i in range(2**n):
+                binary = "{0:b}".format(i)
+                padding = "0" * (n - len(binary))
+                binary = padding + binary
+                binary_array = np.array([int(i) for i in binary])
+                y_array = np.array(y_list)
+                if sum(y_array.dot(binary_array.T) % 2) == 0:
+                    return binary
+                
         except:
             continue
     
     if not s:
         print("Fail to find s with success prob over 99%, please try the solver again.")
         return -1
-    return s
+    return "0" * n

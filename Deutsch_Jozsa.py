@@ -1,6 +1,6 @@
 import cirq
 
-from oracle import Oracle
+from utils import Oracle
 from cirq import Simulator
 
 def deutsch_jozsa_circuit(f, n):
