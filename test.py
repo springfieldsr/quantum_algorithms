@@ -59,17 +59,21 @@ def bv_random_test(n, number_of_tests):
 def simon_random_test(n, number_of_tests):
     for _ in tqdm(range(number_of_tests)):
         s = [random.choice([0, 1]) for _ in range(n)]
+        while sum(s) == 0:
+            s = [random.choice([0, 1]) for _ in range(n)]
         function_mapping = {}
         function_range = random.sample(list(range(2**n)), 2**(n-1))
         for i in range(2**(n-1)):
             binary = "{0:b}".format(function_range[i])
-            padding = "0" * (2 * n - len(binary))
+            padding = "0" * (n- len(binary))
             binary = padding + binary
             function_range[i] = binary
         
         function_range_index = 0
+        print(s)
         for i in range(2**n):
             if i not in function_mapping.keys():
+                print(i)
                 function_mapping[i] = function_range[function_range_index]
                 function_range_index += 1
 
@@ -81,12 +85,10 @@ def simon_random_test(n, number_of_tests):
                 function_mapping[int(counterpart, 2)] = function_mapping[i]
         
         def f(binary):
-            return function_mapping[int(counterpart, 2)]
+            return function_mapping[int(binary, 2)]
 
         try:
             res = simon_solver(f, n)
-            print(res)
-            print("".join([str(i) for i in s]))
             assert res == "".join([str(i) for i in s])
         except:
             print("Simon Test Failed. Returning the failed test case function...")
@@ -95,7 +97,7 @@ def simon_random_test(n, number_of_tests):
     print("Simon Solver all clear for {} bits and {} tests.".format(n, number_of_tests))
     return
 
-dj_random_test(3,5)
-bv_random_test(3,5)
-tmp = simon_random_test(3, 5)
+#dj_random_test(3,5)
+#bv_random_test(3,5)
+tmp = simon_random_test(2, 1)
 if tmp: print(tmp)

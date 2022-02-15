@@ -9,7 +9,7 @@ def simon_circuit(f, n):
     oracle = Oracle(f, n, n)
 
     def s_circuit():
-        for i in range(n + n):
+        for i in range(n):
             yield cirq.H(qubits[i])
         yield oracle.on(*qubits)
         for i in range(n):
@@ -33,7 +33,6 @@ def simon_solver(f, n):
             result = simulator.run(circuit)
             measurements = result.data.values.tolist()[0]
             y_list.append(measurements)
-        
         if len(y_list) != set(tuple(row) for row in y_list):
             continue
         try:
