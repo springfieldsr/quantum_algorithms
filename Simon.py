@@ -3,7 +3,6 @@ import numpy as np
 import scipy as sp
 from utils import Oracle
 from cirq import Simulator
-from collections import Counter
 
 def make_oracle(input_qubits, output_qubits, secret_string):
     """Gates implementing the function f(a) = f(b) iff a ⨁ b = s"""

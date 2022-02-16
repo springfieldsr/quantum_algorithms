@@ -113,7 +113,7 @@ def main():
     #dj_random_test(3,5)
     #bv_random_test(3,5)
 
-    # For testing simon's algorithm, three input variables are up to choice.
+    # For testing simon's algorithm, we can alter the #qubits, how many times we run the simon's algorithm and how many random tests we implement.
     simon_random_test(number_of_qubits=2,runs_per_test=2, number_of_tests=10)
 
 if __name__ == '__main__':
