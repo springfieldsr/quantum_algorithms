@@ -41,7 +41,7 @@ def simon_solver(f, n):
                 null_space = M.nullspace(iszerofunc=lambda x: x % 2 == 0)[0].T      # Obtain the basis of y matrix's nullspace
                 solution = np.array(null_space)[0] % 2                              # Mod 2 to get secret string
                 for i in range(len(solution)):
-                    solution[i] = 1 if solution[i] > 0 else 0                       # If there is a fraction, force it to be 1
+                    solution[i] = 1 if solution[i] >= 1 else 0                       # If there is a fraction, force it to be 1 if it is greater than 1
                 res = ''.join([str(x) for x in solution])
                 if not s: s = res
                 elif res != s:                                                      # If current solution does not match previous solution,

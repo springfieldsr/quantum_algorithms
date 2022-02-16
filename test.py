@@ -122,7 +122,7 @@ def simon_random_test(n, number_of_tests):
 
 
 def main():
-    num_tests = 10
+    num_tests = 25
 
     print("==================================")
     print("Deutsch-Jozsa Testing:")
