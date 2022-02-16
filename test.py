@@ -1,12 +1,13 @@
 import cirq
 import random
-
+import time
 import numpy as np
 from tqdm import tqdm
 from Deutsch_Jozsa import deutsch_jozsa_solver
 from Bernstein_Vazirani import bernstein_vazirani_solver
 from Simon import make_simon_circuit, make_oracle, post_processing
 from collections import Counter
+from matplotlib import pyplot as plt
 
 def dj_random_test(n, number_of_tests):
     for _ in tqdm(range(number_of_tests)):
@@ -108,13 +109,37 @@ def simon_random_test(number_of_qubits, runs_per_test, number_of_tests):
     print("It passed {} random tests.".format(number_of_tests))
     return
 
+def runtime_test(algo, maxbit):
+    record = []
+    for i in range(1,maxbit+1):
+        t0 = time.time()
+        if algo == 0:
+            dj_random_test(n=i,number_of_tests=1)
+        elif algo == 1:
+            bv_random_test(n=i, number_of_tests=1)
+        elif algo == 2 & i > 1:
+            simon_random_test(number_of_qubits=i, runs_per_test=10, number_of_tests=1)
+        record.append(time.time() - t0)
+    return record
+
 def main():
-
-    #dj_random_test(3,5)
-    #bv_random_test(3,5)
-
-    # For testing simon's algorithm, we can alter the #qubits, how many times we run the simon's algorithm and how many random tests we implement.
+    # For Deutsch_Jozsa's algorithm, we can aloter #qubits and #tests.
+    dj_random_test(n=3,number_of_tests=5)
+    # For Bernstein_Vazirani's algorithm, we can aloter #qubits and #tests.
+    bv_random_test(n=3,number_of_tests=5)
+    # For Simon's algorithm, we can alter the #qubits, how many times we run the simon's algorithm and how many random tests we implement.
     simon_random_test(number_of_qubits=2,runs_per_test=2, number_of_tests=10)
 
 if __name__ == '__main__':
     main()
+    maxbit = 30
+    algo = ['Deutsch_Jozsa','Bernstein_Vazirani','Simon','Grover']
+    plt.plot(runtime_test(2, maxbit))
+    plt.show()
+    """
+    for i in range(3):
+        plt.plot(runtime_test(i, maxbit))
+        plt.title(algo[i])
+        plt.
+        plt.show()
+    """
