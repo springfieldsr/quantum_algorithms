@@ -138,7 +138,7 @@ def main():
     print("Simon Testing:")
     for n_bits in range(2, 8):
         simon_random_test(n_bits, num_tests)
-    
-    
+
+
 if __name__ == '__main__':
     main()
