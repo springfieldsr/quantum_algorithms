@@ -1,6 +1,7 @@
 import cirq
 import numpy as np
 
+import scipy as sp
 from utils import Oracle
 from cirq import Simulator
 
@@ -29,22 +30,20 @@ def simon_solver(f, n):
     s = None
     for _ in range(100):
         y_list = []
+        
         for i in range(n - 1):
             result = simulator.run(circuit)
             measurements = result.data.values.tolist()[0]
             y_list.append(measurements)
-        if len(y_list) != set(tuple(row) for row in y_list):
-            continue
         try:
-            for i in range(2**n):
-                binary = "{0:b}".format(i)
-                padding = "0" * (n - len(binary))
-                binary = padding + binary
-                binary_array = np.array([int(i) for i in binary])
-                y_array = np.array(y_list)
-                if sum(y_array.dot(binary_array.T) % 2) == 0:
-                    return binary
-                
+            sing_values = sp.linalg.svdvals(y_list)
+            tolerance = 1e-5
+            if sum(sing_values < tolerance) == 0:  # check if measurements are linearly dependent
+                null_space = sp.linalg.null_space(y_list).T[0]
+                solution = np.around(null_space, 3)  # chop very small values
+                minval = abs(min(solution[np.nonzero(solution)], key=abs))
+                solution = (solution / minval % 2).astype(int)  # renormalize vector mod 2
+                return ''.join([str(x) for x in solution])
         except:
             continue
     

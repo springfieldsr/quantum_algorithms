@@ -65,15 +65,13 @@ def simon_random_test(n, number_of_tests):
         function_range = random.sample(list(range(2**n)), 2**(n-1))
         for i in range(2**(n-1)):
             binary = "{0:b}".format(function_range[i])
-            padding = "0" * (n- len(binary))
+            padding = "0" * (n - len(binary))
             binary = padding + binary
             function_range[i] = binary
         
         function_range_index = 0
-        print(s)
         for i in range(2**n):
             if i not in function_mapping.keys():
-                print(i)
                 function_mapping[i] = function_range[function_range_index]
                 function_range_index += 1
 
@@ -88,8 +86,7 @@ def simon_random_test(n, number_of_tests):
             return function_mapping[int(binary, 2)]
 
         try:
-            res = simon_solver(f, n)
-            assert res == "".join([str(i) for i in s])
+            assert simon_solver(f, n) == "".join([str(i) for i in s])
         except:
             print("Simon Test Failed. Returning the failed test case function...")
             return function_mapping, s
@@ -99,5 +96,7 @@ def simon_random_test(n, number_of_tests):
 
 #dj_random_test(3,5)
 #bv_random_test(3,5)
-tmp = simon_random_test(2, 1)
-if tmp: print(tmp)
+tmp = simon_random_test(7, 1)
+if tmp: 
+    print(tmp[0])
+    print(tmp[1])
