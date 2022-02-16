@@ -3,8 +3,8 @@ import numpy as np
 
 def construct_oracle_matrix(f, n, helper_bits):
     
-    m = n + helper_bits
-    oracle = np.zeros((2**m ,2**m))
+    m = n + helper_bits                                 # Number of qubits
+    oracle = np.zeros((2**m ,2**m))                     # Zero initialize the oracle matrix
 
     for i in range(2**m):
         binary = "{0:b}".format(i)

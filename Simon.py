@@ -1,54 +1,65 @@
 import cirq
 import numpy as np
-
+import scipy as sp
 from utils import Oracle
 from cirq import Simulator
+from collections import Counter
 
-def simon_circuit(f, n):
-    qubits = cirq.LineQubit.range(n + n)
-    oracle = Oracle(f, n, n)
+def make_oracle(input_qubits, output_qubits, secret_string):
+    """Gates implementing the function f(a) = f(b) iff a ⨁ b = s"""
+    # Copy contents to output qubits:
+    for control_qubit, target_qubit in zip(input_qubits, output_qubits):
+        yield cirq.CNOT(control_qubit, target_qubit)
 
-    def s_circuit():
-        for i in range(n):
-            yield cirq.H(qubits[i])
-        yield oracle.on(*qubits)
-        for i in range(n):
-            yield cirq.H(qubits[i])
-        for i in range(n):
-            yield cirq.measure(qubits[i], key='q' + str(i))
-    
-    circuit = cirq.Circuit()
-    circuit.append(s_circuit())
-    return circuit
+    # Create mapping:
+    if sum(secret_string):  # check if the secret string is non-zero
+        # Find significant bit of secret string (first non-zero bit)
+        significant = list(secret_string).index(1)
+
+        # Add secret string to input according to the significant bit:
+        for j in range(len(secret_string)):
+            if secret_string[j] > 0:
+                yield cirq.CNOT(input_qubits[significant], output_qubits[j])
+    # Apply a random permutation:
+    pos = [
+        0,
+        len(secret_string) - 1,
+    ]  # Swap some qubits to define oracle. We choose first and last:
+    yield cirq.SWAP(output_qubits[pos[0]], output_qubits[pos[1]])
 
 
-def simon_solver(f, n):
-    circuit = simon_circuit(f, n)
-    simulator = Simulator()
+def make_simon_circuit(input_qubits, output_qubits, oracle):
+    """Solves for the secret period s of a 2-to-1 function such that
+    f(x) = f(y) iff x ⨁ y = s
+    """
 
-    s = None
-    for _ in range(100):
-        y_list = []
-        for i in range(n - 1):
-            result = simulator.run(circuit)
-            measurements = result.data.values.tolist()[0]
-            y_list.append(measurements)
-        if len(y_list) != set(tuple(row) for row in y_list):
-            continue
-        try:
-            for i in range(2**n):
-                binary = "{0:b}".format(i)
-                padding = "0" * (n - len(binary))
-                binary = padding + binary
-                binary_array = np.array([int(i) for i in binary])
-                y_array = np.array(y_list)
-                if sum(y_array.dot(binary_array.T) % 2) == 0:
-                    return binary
-                
-        except:
-            continue
-    
-    if not s:
-        print("Fail to find s with success prob over 99%, please try the solver again.")
-        return -1
-    return "0" * n
+    c = cirq.Circuit()
+
+    # Initialize qubits.
+    c.append(
+        [
+            cirq.H.on_each(*input_qubits),
+        ]
+    )
+
+    # Query oracle.
+    c.append(oracle)
+
+    # Measure in X basis.
+    c.append([cirq.H.on_each(*input_qubits), cirq.measure(*input_qubits, key='result')])
+
+    return c
+
+
+def post_processing(data, results):
+    """Solves a system of equations with modulo 2 numbers"""
+    sing_values = sp.linalg.svdvals(results)
+    tolerance = 1e-5
+    if sum(sing_values < tolerance) == 0:  # check if measurements are linearly dependent
+        flag = True
+        null_space = sp.linalg.null_space(results).T[0]
+        solution = np.around(null_space, 3)  # chop very small values
+        minval = abs(min(solution[np.nonzero(solution)], key=abs))
+        solution = (solution / minval % 2).astype(int)  # renormalize vector mod 2
+        data.append(''.join([str(x) for x in solution]))
+        return flag

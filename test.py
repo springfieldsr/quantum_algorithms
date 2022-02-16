@@ -2,11 +2,11 @@ import cirq
 import random
 
 import numpy as np
-
 from tqdm import tqdm
 from Deutsch_Jozsa import deutsch_jozsa_solver
 from Bernstein_Vazirani import bernstein_vazirani_solver
-from Simon import simon_solver
+from Simon import make_simon_circuit, make_oracle, post_processing
+from collections import Counter
 
 def dj_random_test(n, number_of_tests):
     for _ in tqdm(range(number_of_tests)):
@@ -56,48 +56,65 @@ def bv_random_test(n, number_of_tests):
     return
 
 
-def simon_random_test(n, number_of_tests):
-    for _ in tqdm(range(number_of_tests)):
-        s = [random.choice([0, 1]) for _ in range(n)]
-        while sum(s) == 0:
-            s = [random.choice([0, 1]) for _ in range(n)]
-        function_mapping = {}
-        function_range = random.sample(list(range(2**n)), 2**(n-1))
-        for i in range(2**(n-1)):
-            binary = "{0:b}".format(function_range[i])
-            padding = "0" * (n- len(binary))
-            binary = padding + binary
-            function_range[i] = binary
-        
-        function_range_index = 0
-        print(s)
-        for i in range(2**n):
-            if i not in function_mapping.keys():
-                print(i)
-                function_mapping[i] = function_range[function_range_index]
-                function_range_index += 1
+def simon_random_test(number_of_qubits, runs_per_test, number_of_tests):
+    quantum_res = []                                                                # Store the outout secret strings from Simon's algorithm
+    ground_truth = []                                                               # Store the real secret strings, which are randomly picked.
 
-                binary = bin(i)[2:]
-                int_binary = [int(i) for i in binary]
-                counterpart = s[:(n - len(int_binary))] + \
-                    [(s[-i] + int_binary[-i]) % 2 for i in range(1, 1 + len(int_binary))][::-1]
-                counterpart = "".join([str(i) for i in counterpart])
-                function_mapping[int(counterpart, 2)] = function_mapping[i]
-        
-        def f(binary):
-            return function_mapping[int(binary, 2)]
+    for i in tqdm(range(number_of_tests)):
+        data = []                                                                   # Store results for MLE
 
-        try:
-            res = simon_solver(f, n)
-            assert res == "".join([str(i) for i in s])
-        except:
-            print("Simon Test Failed. Returning the failed test case function...")
-            return function_mapping, s
-    
-    print("Simon Solver all clear for {} bits and {} tests.".format(n, number_of_tests))
+        s = np.random.randint(low=0, high=1, size=number_of_qubits)                 # Generate random s, including all-zero string.
+        ground_truth.append(''.join([str(x) for x in s]))
+
+        for _ in range(runs_per_test):
+            flag = False                                                            # Check linear independency of output
+            while not flag:
+                input_qubits = [cirq.GridQubit(i, 0) for i in range(number_of_qubits)]          # Define input qubits
+                output_qubits = [                                                               # Define output qubits
+                    cirq.GridQubit(i + number_of_qubits, 0) for i in range(number_of_qubits)
+                ]
+
+                oracle = make_oracle(input_qubits, output_qubits, s)                            # Create oracle for s, where s could be all-zero,
+                                                                                                # representing a 1-1 function
+                circuit = make_simon_circuit(input_qubits, output_qubits, oracle)               # Create Simon's circuit
+
+                simulator = cirq.Simulator()
+                results = [                                                                     # Query the function n-1 times
+                    simulator.run(circuit).measurements['result'][0] for _ in range(number_of_qubits - 1)
+                ]
+
+                flag = post_processing(data, results)                                           # Classical processing
+
+        freqs = Counter(data)                                                                   # Afterwards, find the most likely result
+        res, freq = sorted(freqs.items(), key=lambda x:x[1], reverse=True)[0]
+        # Ideally, there should be only one tuple if the function is 2-1. But to make room for mistakes, we allow for more than one s.
+        # But if the probability of this MLE is not high enough, then the answer must be all-zero string, namely the function might be 1-1.
+        if int(freq) < 0.8 * runs_per_test:
+            res = ''.join(['0'] * number_of_qubits)
+        quantum_res.append(res)
+
+
+    print("Our Simon's algorithm handled {} qubits problem, and every test ran at most {} times.".format(number_of_qubits, runs_per_test))
+    try:
+        assert quantum_res == ground_truth                                                      # Compare the list of results and groundtruth.
+    except:
+        cnt = 0
+        for i in range(number_of_tests):
+            if quantum_res[i] != ground_truth[i]: cnt += 1
+        print("Simon solver solver failed {} tests out of {}.".format(cnt, number_of_tests))
+        print("The ratio of failure is {}.".format(cnt/number_of_tests))
+        return
+
+    print("It passed {} random tests.".format(number_of_tests))
     return
 
-#dj_random_test(3,5)
-#bv_random_test(3,5)
-tmp = simon_random_test(2, 1)
-if tmp: print(tmp)
+def main():
+
+    #dj_random_test(3,5)
+    #bv_random_test(3,5)
+
+    # For testing simon's algorithm, three input variables are up to choice.
+    simon_random_test(number_of_qubits=2,runs_per_test=2, number_of_tests=10)
+
+if __name__ == '__main__':
+    main()
