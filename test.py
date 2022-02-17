@@ -5,7 +5,7 @@ from Deutsch_Jozsa import deutsch_jozsa_solver
 from Bernstein_Vazirani import bernstein_vazirani_solver
 from Simon import simon_solver
 import numpy as np
-import Grover
+from Grover import Grover
 
 """
 All random tests below follow a same strategy, which is to randomly 
@@ -169,7 +169,7 @@ def main():
 
     print("==================================")
     print("Grover Testing:")
-    for n_bits in tqdm(range(2, 8)):
+    for n_bits in tqdm(range(2, 20)):
         grover_random_test(n_bits, num_tests)
 
 
