@@ -217,7 +217,7 @@ def grover_random_test_graph(start, end):
         start_time = time.time()
         grover = Grover(n, function)                                                 # Instantiate a Grover class
         result = grover.grover_solver()                                              # Output result is string
-        
+
         interval_time = time.time() - start_time
         tarray.append(interval_time)
         narray.append(n)
@@ -226,7 +226,7 @@ def grover_random_test_graph(start, end):
     plt.yscale('log')
     plt.xlabel('N:Bits')
     plt.ylabel('Time in Log Scale')
-    plt.title('Simon Random test graph')
+    plt.title('Grover Random test graph')
     plt.show()
     return n_failed
 
