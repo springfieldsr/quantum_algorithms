@@ -17,7 +17,7 @@ output.
 # Random test for Deutsch-Jozsa algorithm
 def dj_random_test(n, number_of_tests):
     n_failed = 0
-    for _ in tqdm(range(number_of_tests)):
+    for _ in range(number_of_tests):
         constant_balanced_flag = random.choice([0, 1])                                          # Randomly decide constant or balanced flag
         if constant_balanced_flag == 0:
             val = str(random.choice([0, 1]))                                                    # If constant, randomly choose all 0's or all 1's
@@ -48,7 +48,7 @@ def dj_random_test(n, number_of_tests):
 
 def bv_random_test(n, number_of_tests):
     n_failed = 0
-    for _ in tqdm(range(number_of_tests)):
+    for _ in range(number_of_tests):
         a = [random.choice([0, 1]) for _ in range(n)]                                           # Randomly pick input a
         b = random.choice([0, 1])                                                               # Randomly pick input b
 
@@ -75,7 +75,7 @@ def bv_random_test(n, number_of_tests):
 
 def simon_random_test(n, number_of_tests):
     n_failed = 0
-    for _ in tqdm(range(number_of_tests)):
+    for _ in range(number_of_tests):
         s = [random.choice([0, 1]) for _ in range(n)]                       # Randomly pick the secret string s
         function_mapping = {}                                               # Set the function mapping for target f
         if sum(s) == 0:                                                     # If s = 0, which means f is one-to-one                          
@@ -129,47 +129,47 @@ def grover_random_test(number_of_qubits,  number_of_tests):
 
     grover_result = []
     ground_truth = []
-    for _ in tqdm(range(number_of_tests)):
-        answer = np.random.randint(low=0,high=2**number_of_qubits)
+    for _ in range(number_of_tests):
+        answer = np.random.randint(low=0,high=2**number_of_qubits)                                  # Randomly choose a key
         ground_truth.append(answer)
-        grover = Grover(number_of_qubits, function)
-        result = grover.grover_solver()
+        grover = Grover(number_of_qubits, function)                                                 # Instantiate a Grover class
+        result = grover.grover_solver()                                                             # Output result is string
         grover_result.append(int(result,2))
 
     cnt = 0
     try:
-        assert grover_result == ground_truth
+        assert grover_result == ground_truth                                                        # Hopefully, we can pass every test
     except:
-        for i in range(number_of_tests):
+        for i in range(number_of_tests):                                                            # Count how many times we failed
             if grover_result[i] != ground_truth[i]:
                 cnt += 1
         print("In {} tests, our algorithm failed {} times.".format(number_of_tests, cnt))
 
         return cnt/number_of_tests
     print("Our Grover simulator passed {} tests.".format(number_of_tests))
-    return cnt/number_of_tests
+    return cnt
 
 def main():
     num_tests = 25
 
     print("==================================")
     print("Deutsch-Jozsa Testing:")
-    for n_bits in range(1, 10):
+    for n_bits in tqdm(range(1, 10)):
         dj_random_test(n_bits, num_tests)
 
     print("==================================")
     print("Bernstein-Vazirani Testing:")
-    for n_bits in range(1, 10):
+    for n_bits in tqdm(range(1, 10)):
         bv_random_test(n_bits, num_tests)
     
     print("==================================")
     print("Simon Testing:")
-    for n_bits in range(2, 8):
+    for n_bits in tqdm(range(2, 8)):
         simon_random_test(n_bits, num_tests)
 
     print("==================================")
-    print("Simon Testing:")
-    for n_bits in range(2, 8):
+    print("Grover Testing:")
+    for n_bits in tqdm(range(2, 8)):
         grover_random_test(n_bits, num_tests)
 
 

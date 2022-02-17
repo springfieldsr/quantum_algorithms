@@ -8,6 +8,7 @@ from Bernstein_Vazirani import bernstein_vazirani_solver
 # from Simon import make_simon_circuit, make_oracle, post_processing
 from Simon import simon_solver
 from collections import Counter
+import Grover
 import time
 import random
 
