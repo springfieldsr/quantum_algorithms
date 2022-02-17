@@ -1,7 +1,2 @@
 __pycache__/
-*.pyc
-__pycache__/Simon.cpython-39.pyc
-__pycache__/Bernstein_Vazirani.cpython-39.pyc
-__pycache__/Bernstein_Vazirani.cpython-39.pyc
-*.pyc
-*.pyc
+tmp.py

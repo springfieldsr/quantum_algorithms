@@ -13,7 +13,7 @@ def construct_oracle_matrix(f, n, helper_bits):
 
         output = f(binary[:n])
         binary = binary[:n] + "".join([str((int(binary[n + i]) + int(output[i])) % 2) for i in range(helper_bits)])
-        oracle[i][int(binary, 2)] = 1
+        oracle[int(binary, 2)][i] = 1
     
     return oracle
 

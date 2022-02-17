@@ -1,65 +1,63 @@
 import cirq
 import numpy as np
-import scipy as sp
+
+import sympy 
 from utils import Oracle
 from cirq import Simulator
-from collections import Counter
-
-def make_oracle(input_qubits, output_qubits, secret_string):
-    """Gates implementing the function f(a) = f(b) iff a ⨁ b = s"""
-    # Copy contents to output qubits:
-    for control_qubit, target_qubit in zip(input_qubits, output_qubits):
-        yield cirq.CNOT(control_qubit, target_qubit)
-
-    # Create mapping:
-    if sum(secret_string):  # check if the secret string is non-zero
-        # Find significant bit of secret string (first non-zero bit)
-        significant = list(secret_string).index(1)
-
-        # Add secret string to input according to the significant bit:
-        for j in range(len(secret_string)):
-            if secret_string[j] > 0:
-                yield cirq.CNOT(input_qubits[significant], output_qubits[j])
-    # Apply a random permutation:
-    pos = [
-        0,
-        len(secret_string) - 1,
-    ]  # Swap some qubits to define oracle. We choose first and last:
-    yield cirq.SWAP(output_qubits[pos[0]], output_qubits[pos[1]])
 
 
-def make_simon_circuit(input_qubits, output_qubits, oracle):
-    """Solves for the secret period s of a 2-to-1 function such that
-    f(x) = f(y) iff x ⨁ y = s
-    """
+def simon_circuit(f, n):
+    qubits = cirq.LineQubit.range(n + n)                        # Create n qubits and n helper qubits
+    oracle = Oracle(f, n, n)                                    # Create Uf
 
-    c = cirq.Circuit()
-
-    # Initialize qubits.
-    c.append(
-        [
-            cirq.H.on_each(*input_qubits),
-        ]
-    )
-
-    # Query oracle.
-    c.append(oracle)
-
-    # Measure in X basis.
-    c.append([cirq.H.on_each(*input_qubits), cirq.measure(*input_qubits, key='result')])
-
-    return c
+    def s_circuit():
+        for i in range(n):
+            yield cirq.H(qubits[i])                             # Apply H gates to first n qubits
+        yield oracle.on(*qubits)                                # Add Uf
+        for i in range(n):
+            yield cirq.H(qubits[i])                             # Apply H gates to first n qubits
+        for i in range(n):
+            yield cirq.measure(qubits[i], key='q' + str(i))     # Measure first n qubits
+    
+    circuit = cirq.Circuit(s_circuit())
+    return circuit
 
 
-def post_processing(data, results):
-    """Solves a system of equations with modulo 2 numbers"""
-    sing_values = sp.linalg.svdvals(results)
-    tolerance = 1e-5
-    if sum(sing_values < tolerance) == 0:  # check if measurements are linearly dependent
-        flag = True
-        null_space = sp.linalg.null_space(results).T[0]
-        solution = np.around(null_space, 3)  # chop very small values
-        minval = abs(min(solution[np.nonzero(solution)], key=abs))
-        solution = (solution / minval % 2).astype(int)  # renormalize vector mod 2
-        data.append(''.join([str(x) for x in solution]))
-        return flag
+def simon_solver(f, n):
+    circuit = simon_circuit(f, n)
+    simulator = Simulator()
+
+    s = None
+    for _ in range(20):                                         # As Simon is a probablistic algorithm, we need some iters to ensure high prob of success
+        y_list = []                                             # y equations list
+        
+        for i in range(n - 1):
+            result = simulator.run(circuit)
+            measurements = result.data.values.tolist()[0]
+            y_list.append(measurements)                         # Append n - 1 times measurements to the list
+        try:
+            M = sympy.Matrix(y_list)
+            if len(M.T.nullspace(iszerofunc=lambda x: x % 2 == 0)) == 0:            # Check if measurements are linearly dependent
+                null_space = M.nullspace(iszerofunc=lambda x: x % 2 == 0)[0].T      # Obtain the basis of y matrix's nullspace
+                solution = abs(null_space)
+                if min(solution) != 0: solution /= min(solution)
+                solution = abs(np.array(solution)[0])
+                solution = solution % 2                                             # Mod 2 to get secret string
+                for i in range(len(solution)):
+                    solution[i] = 1 if solution[i] != 0 else 0                      # If there is a fraction, force it to be 1 if it is greater than 1
+                flag = False                                                        # To eliminate the problem caused by float point division
+                for y in y_list:                                                    # We perform a check on the obtained solution to see if its dot product
+                    if sum([y[i] * solution[i] for i in range(n)]) % 2 != 0:        # with all y's is 0
+                        flag = True
+                        break
+                if flag: continue
+                res = ''.join([str(x) for x in solution])
+                if not s: s = res
+                elif res != s:                                                      # If current solution does not match previous solution,
+                    return "0" * n                                                  # Then we know s can only be 0
+        except:
+            continue
+    if not s:
+        print("Fail to find s with success prob over 99%, please try the solver again.")
+        return -1
+    return s
