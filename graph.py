@@ -230,11 +230,37 @@ def grover_random_test_graph(start, end):
     plt.show()
     return n_failed
 
+def grover_Uf_test(n):
+    tarray = []
+    narray = []
+
+    def function(input):
+        return 1 if input == answer else 0
+    a, b = '0b' + ''.join(['10'] * (n//2)), '0b' + ''.join(['01'] * (n//2))
+    answers = [2**n - 1, int(a,2), int(b,2),2 ** (n-1), 2**(n//2) ,1 , 0]
+    for i in range(len(answers)):
+        answer = answers[i]                                  # Randomly choose a key
+        print(bin(answer))
+        start_time = time.time()
+        grover = Grover(n, function)                                                 # Instantiate a Grover class
+        result = grover.grover_solver()                                              # Output result is string
+
+        interval_time = time.time() - start_time
+        tarray.append(interval_time)
+        narray.append(i)
+
+    plt.plot(narray, tarray, marker="*", color="grey")
+    plt.yscale('log')
+    plt.xlabel('N:Bits')
+    plt.ylabel('Time in Log Scale')
+    plt.title('Grover Uf test graph')
+    plt.show()
+    return tarray
 def main():
     # graphing with start n and end n, inclusive
     # simon_random_test_graph(2,6)
     # simon_uftest(4)
-    grover_random_test_graph(2, 10)
-
+    # grover_random_test_graph(2, 10)
+    grover_Uf_test(10)
 if __name__ == '__main__':
     main()
