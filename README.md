@@ -48,4 +48,4 @@ The output of these tests is an int indicating how many times a solver fails wit
 
 The gist of these random test is that we randomly create a mapping from the domain space to range space and use such mapping as $f$ for solvers.  
 
-For graph.py, we blablabla
+For graph.py, we simple add graphing functions over the each tests with single runs for us evaluate and analyze the runtime behavior. It is repetitive codes with test.py but with small modifications so it serves as a test ground for our functions, and thus no detailed comments and should not be included in submission.
