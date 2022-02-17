@@ -202,11 +202,39 @@ def simon_uftest(n):
 
     return
 
+
+def grover_random_test_graph(start, end):
+    n_failed = 0
+    tarray = []
+    narray = []
+
+    def function(input):
+        return 1 if input == answer else 0
+
+    for n in range(start, end + 1):
+        answer = np.random.randint(low=0,high=2**n)                                  # Randomly choose a key
+
+        start_time = time.time()
+        grover = Grover(n, function)                                                 # Instantiate a Grover class
+        result = grover.grover_solver()                                              # Output result is string
+        
+        interval_time = time.time() - start_time
+        tarray.append(interval_time)
+        narray.append(n)
+
+    plt.plot(narray, tarray, marker="*", color="grey")
+    plt.yscale('log')
+    plt.xlabel('N:Bits')
+    plt.ylabel('Time in Log Scale')
+    plt.title('Simon Random test graph')
+    plt.show()
+    return n_failed
+
 def main():
     # graphing with start n and end n, inclusive
     # simon_random_test_graph(2,6)
-    simon_uftest(4)
-
+    # simon_uftest(4)
+    grover_random_test_graph(2, 10)
 
 if __name__ == '__main__':
     main()
