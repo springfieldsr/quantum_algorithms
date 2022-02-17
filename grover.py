@@ -9,6 +9,8 @@ class Grover:
         theta = np.arcsin(1 / np.sqrt(2 ** self.n))
         k = np.pi / (4 * theta) - 1 / 2
         self.number_of_runs = int(np.floor(k))
+        if np.sin((2*self.number_of_runs+1)*theta) < np.sin((2*self.number_of_runs+3)*theta):
+            self.number_of_runs += 1
 
         """
         if k > self.number_of_runs + 0.5:
@@ -28,8 +30,9 @@ class Grover:
 
         # Sample from the circuit a couple times.
         simulator = cirq.Simulator()
-        result = simulator.run(circuit,repetitions=10)
+        result = simulator.run(circuit,repetitions=100)
         frequencies = result.histogram(key='result', fold_func=self.bitstring)
+        print(frequencies)
         # Check if we actually found the secret value.
         most_common_bitstring = frequencies.most_common(1)[0][0]
         return most_common_bitstring
@@ -90,7 +93,6 @@ class Grover:
 
         yield (cirq.X(q) for (q, bit) in zip(input_qubits, x_bits) if not bit)
         yield cnX
-
         yield (cirq.X(q) for (q, bit) in zip(input_qubits, x_bits) if not bit)
 
     def set_io_qubits(self):
@@ -130,6 +132,6 @@ def grover_random_test(number_of_qubits,  number_of_tests):
     return
 
 
-n = 2
+n = 3
 t = 10
 print(grover_random_test(n,t))
