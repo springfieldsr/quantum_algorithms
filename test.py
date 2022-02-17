@@ -4,6 +4,8 @@ from tqdm import tqdm
 from Deutsch_Jozsa import deutsch_jozsa_solver
 from Bernstein_Vazirani import bernstein_vazirani_solver
 from Simon import simon_solver
+import numpy as np
+import Grover
 
 """
 All random tests below follow a same strategy, which is to randomly 
@@ -120,6 +122,32 @@ def simon_random_test(n, number_of_tests):
         print("For {} bits, Simon solver failed {} times".format(n, n_failed))
     return n_failed
 
+def grover_random_test(number_of_qubits,  number_of_tests):
+
+    def function(input):
+        return 1 if input == answer else 0
+
+    grover_result = []
+    ground_truth = []
+    for _ in tqdm(range(number_of_tests)):
+        answer = np.random.randint(low=0,high=2**number_of_qubits)
+        ground_truth.append(answer)
+        grover = Grover(number_of_qubits, function)
+        result = grover.grover_solver()
+        grover_result.append(int(result,2))
+
+    cnt = 0
+    try:
+        assert grover_result == ground_truth
+    except:
+        for i in range(number_of_tests):
+            if grover_result[i] != ground_truth[i]:
+                cnt += 1
+        print("In {} tests, our algorithm failed {} times.".format(number_of_tests, cnt))
+
+        return cnt/number_of_tests
+    print("Our Grover simulator passed {} tests.".format(number_of_tests))
+    return cnt/number_of_tests
 
 def main():
     num_tests = 25
@@ -138,6 +166,11 @@ def main():
     print("Simon Testing:")
     for n_bits in range(2, 8):
         simon_random_test(n_bits, num_tests)
+
+    print("==================================")
+    print("Simon Testing:")
+    for n_bits in range(2, 8):
+        grover_random_test(n_bits, num_tests)
 
 
 if __name__ == '__main__':
