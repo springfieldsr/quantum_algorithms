@@ -6,7 +6,6 @@ from cirq import X,Z,TOFFOLI
 class Grover:
     def __init__(self, number_of_qubits, function):
         self.n = number_of_qubits
-        #self.number_of_runs = int(np.floor(np.pi * 4 / np.sqrt(2 ** self.n)))
         theta = np.arcsin(1 / np.sqrt(2 ** self.n))
         k = np.pi / (4 * theta) - 1 / 2
         self.number_of_runs = int(np.floor(k))
@@ -67,16 +66,7 @@ class Grover:
         # Make oracle.
         # for (1, 1) it's just a Toffoli gate
         # otherwise negate the zero-bits.
-        """
-        oracle_matrix = np.identity(2 ** self.n)
-        for i in range(2 ** self.n):
-            if self.f(i) == 1:
-                oracle_matrix[i][i] = -1
-        oracle = cirq.MatrixGate(matrix=oracle_matrix, name="Uf")
-        )
-        return oracle.on(input_qubits.extend(output_qubit))
 
-        """
         x_bits = [0] * self.n
         for i in range(2 ** self.n):
             if self.f(i) == 1:
