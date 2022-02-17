@@ -25,9 +25,8 @@ class Grover:
 
         # Sample from the circuit a couple times.
         simulator = cirq.Simulator()
-        result = simulator.run(circuit)
+        result = simulator.run(circuit,repetitions=10)
         frequencies = result.histogram(key='result', fold_func=self.bitstring)
-        print(frequencies)
         # Check if we actually found the secret value.
         most_common_bitstring = frequencies.most_common(1)[0][0]
         return most_common_bitstring
@@ -64,7 +63,7 @@ class Grover:
             c.append(cirq.H.on_each(*input_qubits))
 
             # Measure the result.
-            c.append(cirq.measure(*input_qubits, key='result'))
+        c.append(cirq.measure(*input_qubits, key='result'))
 
         return c
 
@@ -118,7 +117,6 @@ def grover_random_test(number_of_qubits,  number_of_tests):
         ground_truth.append(answer)
         grover = Grover(number_of_qubits, function)
         result = grover.grover_solver()
-        grover_result.append(result)
         grover_result.append(int(result,2))
 
     try:
@@ -134,6 +132,6 @@ def grover_random_test(number_of_qubits,  number_of_tests):
     return
 
 
-n = 2
+n = 3
 t = 10
 print(grover_random_test(n,t))
