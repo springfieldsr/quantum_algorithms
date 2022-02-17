@@ -6,16 +6,13 @@ from cirq import X,Z,TOFFOLI
 class Grover:
     def __init__(self, number_of_qubits, function):
         self.n = number_of_qubits
+        #self.number_of_runs = int(np.floor(np.pi * 4 / np.sqrt(2 ** self.n)))
         theta = np.arcsin(1 / np.sqrt(2 ** self.n))
         k = np.pi / (4 * theta) - 1 / 2
         self.number_of_runs = int(np.floor(k))
         if np.sin((2*self.number_of_runs+1)*theta) < np.sin((2*self.number_of_runs+3)*theta):
             self.number_of_runs += 1
 
-        """
-        if k > self.number_of_runs + 0.5:
-            self.number_of_runs += 1
-        """
         self.f = function
 
     def grover_solver(self):
@@ -32,7 +29,7 @@ class Grover:
         simulator = cirq.Simulator()
         result = simulator.run(circuit,repetitions=100)
         frequencies = result.histogram(key='result', fold_func=self.bitstring)
-        print(frequencies)
+
         # Check if we actually found the secret value.
         most_common_bitstring = frequencies.most_common(1)[0][0]
         return most_common_bitstring
@@ -43,28 +40,26 @@ class Grover:
         c = cirq.Circuit()
         c.append(
             [
-                cirq.X(output_qubit),
                 cirq.H(output_qubit),
+                cirq.Z(output_qubit),
                 cirq.H.on_each(*input_qubits),
             ]
         )
 
         for _ in range(self.number_of_runs):
             # Query oracle.
-            c.append(oracle)
+            c.append(self.make_oracle(input_qubits, output_qubit))
 
             # Construct Grover operator.
             c.append(cirq.H.on_each(*input_qubits))
             c.append(cirq.X.on_each(*input_qubits))
             cnX = X.controlled(self.n).on(*input_qubits[:self.n], output_qubit)
             c.append(cnX)
-
             c.append(cirq.X.on_each(*input_qubits))
+
             c.append(cirq.H.on_each(*input_qubits))
-
-            # Measure the result.
+        # Measure the result.
         c.append(cirq.measure(*input_qubits, key='result'))
-
         return c
 
     def make_oracle(self, input_qubits, output_qubit):
@@ -117,21 +112,26 @@ def grover_random_test(number_of_qubits,  number_of_tests):
         grover = Grover(number_of_qubits, function)
         result = grover.grover_solver()
         grover_result.append(int(result,2))
+
+    cnt = 0
     try:
-        print(grover_result)
-        print(ground_truth)
         assert grover_result == ground_truth
     except:
-        cnt = 0
         for i in range(number_of_tests):
             if grover_result[i] != ground_truth[i]:
                 cnt += 1
         print("In {} tests, our algorithm failed {} times.".format(number_of_tests, cnt))
-        return
+
+        return cnt/number_of_tests
     print("Our Grover simulator passed {} tests.".format(number_of_tests))
-    return
+    return cnt/number_of_tests
 
 
-n = 3
+n = 9
 t = 10
-print(grover_random_test(n,t))
+
+print(grover_random_test(n, t))
+ratio = []
+for n in range(2, 15):
+    ratio.append(grover_random_test(n, t))
+print(ratio)
