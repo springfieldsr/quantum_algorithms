@@ -9,8 +9,11 @@ class Grover:
         theta = np.arcsin(1 / np.sqrt(2 ** self.n))
         k = np.pi / (4 * theta) - 1 / 2
         self.number_of_runs = int(np.floor(k))
+
+        """
         if k > self.number_of_runs + 0.5:
             self.number_of_runs += 1
+        """
         self.f = function
 
     def grover_solver(self):
@@ -35,17 +38,15 @@ class Grover:
         """Find the value recognized by the oracle in sqrt(N) attempts."""
         # For 2 input qubits, that means using Grover operator only once.
         c = cirq.Circuit()
+        c.append(
+            [
+                cirq.X(output_qubit),
+                cirq.H(output_qubit),
+                cirq.H.on_each(*input_qubits),
+            ]
+        )
 
         for _ in range(self.number_of_runs):
-            # Initialize qubits.
-            c.append(
-                [
-                    cirq.X(output_qubit),
-                    cirq.H(output_qubit),
-                    cirq.H.on_each(*input_qubits),
-                ]
-            )
-
             # Query oracle.
             c.append(oracle)
 
@@ -54,11 +55,7 @@ class Grover:
             c.append(cirq.X.on_each(*input_qubits))
             cnX = X.controlled(self.n).on(*input_qubits[:self.n], output_qubit)
             c.append(cnX)
-            """
-            c.append(cirq.H.on(input_qubits[1]))
-            c.append(cirq.CNOT(input_qubits[0], input_qubits[1]))
-            c.append(cirq.H.on(input_qubits[1]))
-            """
+
             c.append(cirq.X.on_each(*input_qubits))
             c.append(cirq.H.on_each(*input_qubits))
 
@@ -93,7 +90,7 @@ class Grover:
 
         yield (cirq.X(q) for (q, bit) in zip(input_qubits, x_bits) if not bit)
         yield cnX
-        #yield (cirq.TOFFOLI(input_qubits[0], input_qubits[1], output_qubit))
+
         yield (cirq.X(q) for (q, bit) in zip(input_qubits, x_bits) if not bit)
 
     def set_io_qubits(self):
@@ -118,8 +115,9 @@ def grover_random_test(number_of_qubits,  number_of_tests):
         grover = Grover(number_of_qubits, function)
         result = grover.grover_solver()
         grover_result.append(int(result,2))
-
     try:
+        print(grover_result)
+        print(ground_truth)
         assert grover_result == ground_truth
     except:
         cnt = 0
@@ -132,6 +130,6 @@ def grover_random_test(number_of_qubits,  number_of_tests):
     return
 
 
-n = 3
+n = 2
 t = 10
 print(grover_random_test(n,t))
