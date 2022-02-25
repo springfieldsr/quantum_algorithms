@@ -3,6 +3,7 @@ import numpy as np
 from cirq import Simulator
 
 
+# Create the phaseshift gate
 class PhaseShift(cirq.Gate):
     def __init__(self, gamma):
         super(PhaseShift, self)
@@ -20,32 +21,34 @@ class PhaseShift(cirq.Gate):
 
 
 def qaoa_circuit(n, gamma, beta, clauses):
-    qubits = cirq.LineQubit.range(n + 1)
-    P1 = PhaseShift(gamma)
-    P2 = PhaseShift(-1 * gamma)
+    qubits = cirq.LineQubit.range(n + 1)        # Add helper qubit
+    P1 = PhaseShift(gamma)                      # Gate to shift up
+    P2 = PhaseShift(-1 * gamma)                 # Gate to shift down
 
-    yield cirq.X(qubits[-1])
+    yield cirq.X(qubits[-1])                    # Flip the helper bit to be 1
     for i in range(n):
-        yield cirq.H(qubits[i])
+        yield cirq.H(qubits[i])                 # Apply H gates to all first n qubits
     
+    # Sep(gamma)
     for x1, x2 in clauses:
-        if x1 < 0:
-            yield cirq.X(qubits[abs(x1) - 1])
+        if x1 < 0:                                                                      # If literal is negative in current clause
+            yield cirq.X(qubits[abs(x1) - 1])                                           # then negate it
         if x2 < 0:
             yield cirq.X(qubits[abs(x2) - 1])
-        yield P1(qubits[-1]).controlled_by(qubits[abs(x1) - 1])
-        yield P1(qubits[-1]).controlled_by(qubits[abs(x2) - 1])
-        yield P2(qubits[-1]).controlled_by(qubits[abs(x1) - 1], qubits[abs(x2) - 1])
+        yield P1(qubits[-1]).controlled_by(qubits[abs(x1) - 1])                         # Shift up if current state satisfies this clause
+        yield P1(qubits[-1]).controlled_by(qubits[abs(x2) - 1])                         # Shift up if current state satisfies this clause
+        yield P2(qubits[-1]).controlled_by(qubits[abs(x1) - 1], qubits[abs(x2) - 1])    # Shift down if both qubits satisfy this clause
 
-        if x1 < 0:
+        if x1 < 0:                              # Negate back if literals are negative
             yield cirq.X(qubits[abs(x1) - 1])
         if x2 < 0:
             yield cirq.X(qubits[abs(x2) - 1])
     
-    for i in range(n):
+    # Mix(beta)
+    for i in range(n):                          # Apply Rx(2 * beta) to all first n qubits
         yield cirq.Rx(rads=2 * beta)(qubits[i])
     
-    for i in range(n):
+    for i in range(n):                          # Measure
         yield cirq.measure(qubits[i])
 
 
@@ -54,13 +57,13 @@ def QAOA(n_lit, t, n_trials, clauses):
     max_count = 0
     candidate = None
     for _ in range(n_trials):
-        gamma, beta = np.random.uniform(0, 2 * np.pi), np.random.uniform(0, np.pi)
-        circuit = cirq.Circuit(qaoa_circuit(n_lit, gamma, beta, clauses))
-        result = simulator.run(circuit)
+        gamma, beta = np.random.uniform(0, 2 * np.pi), np.random.uniform(0, np.pi)              # Randomly pick gamma and beta
+        circuit = cirq.Circuit(qaoa_circuit(n_lit, gamma, beta, clauses))                       # Create circuit
+        result = simulator.run(circuit)                                                         # Obtain results after meansurement
 
         measurements = result.data.values.tolist()[0]
         count = 0
-        for x1, x2 in clauses:
+        for x1, x2 in clauses:                                                                  # Calculate how many clauses current string satisfies
             sat = 0
             neg1, neg2 = x1 < 0, x2 < 0
             sat += (measurements[abs(x1) - 1] + neg1) % 2

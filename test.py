@@ -1,11 +1,12 @@
 import random
+import numpy as np
 
 from tqdm import tqdm
 from Deutsch_Jozsa import deutsch_jozsa_solver
 from Bernstein_Vazirani import bernstein_vazirani_solver
 from Simon import simon_solver
-import numpy as np
 from Grover import Grover
+from QAOA import QAOA
 
 """
 All random tests below follow a same strategy, which is to randomly 
@@ -148,6 +149,41 @@ def grover_random_test(number_of_qubits,  number_of_tests):
         return cnt/number_of_tests
     print("Our Grover simulator passed {} tests.".format(number_of_tests))
     return cnt
+
+
+def QAOA_random_test(n_max_literals, number_of_tests):
+    n_failed = 0
+    for _ in range(number_of_tests):
+        literals = list(range(1, n_max_literals + 1))
+        n_clauses = random.randint(10, 30)                                  # Randomly choose clause length
+        clauses = []
+        literal_set = set()
+        for _ in range(n_clauses):                                          # Randomly create list of clauses
+            sign1, sign2 = random.choice([-1, 1]), random.choice([-1, 1])
+            x1 = random.choice(literals) * sign1
+            x2 = random.choice(literals) * sign2
+            clauses.append((x1, x2))
+
+            literal_set.add(abs(x1))
+            literal_set.add(abs(x2))
+        n_literals = len(literal_set)                                       # Get number of literals in clauses
+
+        #TODO: find the upper bound of satisfiable clauses
+        t = random.randint(5, 15)
+        try:
+            assert QAOA(n_literals, t, 20, clauses)
+        except:
+            print("QAOA Test Failed. Returning the failed test case function...")
+            print(clauses)
+            n_failed += 1
+    
+    if n_failed == 0:
+        print("QAOA Solver all clear for {} tests.".format(number_of_tests))
+    else:
+        print("QAOA solver failed {} times".format(n_failed))
+    return n_failed
+
+
 
 def main():
     num_tests = 25
