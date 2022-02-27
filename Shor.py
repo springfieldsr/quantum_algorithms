@@ -6,8 +6,9 @@ import time
 from matplotlib import pyplot as plt
 
 class helper:
+    # Some functions that help communicate between integer and qubits.
     def bits_to_integer(self, bits):
-        '''From a string of bits, return the integer representation.'''
+        # Translate a list of bits into an integer
         i = 0
         for b in bits[::-1]:
             i <<= 1
@@ -15,13 +16,14 @@ class helper:
         return int(i)
 
     def load_integer(self, qubits, integer):
+        # load a large integer to qubits in binary
         for q in qubits:
             if (integer % 2):
                 yield  cirq.X(q)
             integer >>= 2
 
     def integer_to_bits(self, n, i):
-        '''From integer, return string of bits representation. n is total number of bits.'''
+        # Translate integer i a list of binary bits.
         bits = []
         for _ in range(n):
             bits.append(i % 2)
@@ -29,15 +31,16 @@ class helper:
         return bits
 
     def continued_fraction(self, p, q):
-        '''Given p/q, return its continued fraction as a sequence.'''
+        # Given to integer p and q, return floor(p/q) as a sequence
+        # for the purpose of calculating order.
         while q != 0:
             a = p // q
             yield a
             p, q = q, p - q * a
 
     def approximate_fraction(self, p, q, N):
-        '''Given p/q, find the closest fraction a/b where b < N. Returns a tuple (a, b).'''
-        ## truncate continued fraction expansion when denominator >= N
+        # Given p/q, find the closest fraction a/b where b < N. Returns a tuple (a, b).'''
+        # Truncate continued fraction expansion when denominator >= N
         a1, a2 = 1, 0
         b1, b2 = 0, 1
         truncated = False
@@ -64,91 +67,251 @@ class helper:
             ## else, no better approximation
         return a1, b1
 
-class ModularExp(cirq.ArithmeticOperation):
-    """Quantum modular exponentiation.
-    This class represents the unitary which multiplies base raised to exponent
-    into the target modulo the given modulus. More precisely, it represents the
-    unitary V which computes modular exponentiation x**e mod n:
-        V|y⟩|e⟩ = |y * x**e mod n⟩ |e⟩     0 <= y < n
-        V|y⟩|e⟩ = |y⟩ |e⟩                  n <= y
-    where y is the target register, e is the exponent register, x is the base
-    and n is the modulus. Consequently,
-        V|y⟩|e⟩ = (U**e|r⟩)|e⟩
-    where U is the unitary defined as
-        U|y⟩ = |y * x mod n⟩      0 <= y < n
-        U|y⟩ = |y⟩                n <= y
-    in the header of this file.
-    Quantum order finding algorithm (which is the quantum part of the Shor's
-    algorithm) uses quantum modular exponentiation together with the Quantum
-    Phase Estimation to compute the order of x modulo n.
-    """
 
-    def __init__(
-        self,
-        target: Sequence[cirq.Qid],
-        exponent: Union[int, Sequence[cirq.Qid]],
-        base: int,
-        modulus: int,
-    ) -> None:
-        if len(target) < modulus.bit_length():
-            raise ValueError(
-                f'Register with {len(target)} qubits is too small for modulus {modulus}'
-            )
-        self.target = target
-        self.exponent = exponent
-        self.base = base
-        self.modulus = modulus
+# Here we borrow 4 Quantum gates for arithmetic from
+# https://github.com/kevinddchen/Cirq-PrimeFactorization/blob/main/arithmetic.py
+# The implementation is based on https://arxiv.org/abs/quant-ph/9511018.
 
-    def registers(self) -> Sequence[Union[int, Sequence[cirq.Qid]]]:
-        return self.target, self.exponent, self.base, self.modulus
+class Add(cirq.Gate):
+    '''Add classical integer a to qubit b. To account for possible overflow, an
+    extra qubit (initialized to zero) must be supplied for b. Uses O(n) elementary
+    gates.
 
-    def with_registers(
-        self,
-        *new_registers: Union[int, Sequence['cirq.Qid']],
-    ) -> 'ModularExp':
-        if len(new_registers) != 4:
-            raise ValueError(
-                f'Expected 4 registers (target, exponent, base, '
-                f'modulus), but got {len(new_registers)}'
-            )
-        target, exponent, base, modulus = new_registers
-        if not isinstance(target, Sequence):
-            raise ValueError(f'Target must be a qubit register, got {type(target)}')
-        if not isinstance(base, int):
-            raise ValueError(f'Base must be a classical constant, got {type(base)}')
-        if not isinstance(modulus, int):
-            raise ValueError(f'Modulus must be a classical constant, got {type(modulus)}')
-        return ModularExp(target, exponent, base, modulus)
+      |b> --> |b+a>
 
-    def apply(self, *register_values: int) -> int:
-        assert len(register_values) == 4
-        target, exponent, base, modulus = register_values
-        if target >= modulus:
-            return target
-        return (target * base ** exponent) % modulus
+    Parameters:
+      n: number of qubits.
+      a: integer, 0 <= a < 2^n.
 
-    def _circuit_diagram_info_(
-        self,
-        args: cirq.CircuitDiagramInfoArgs,
-    ) -> cirq.CircuitDiagramInfo:
-        assert args.known_qubits is not None
-        wire_symbols: List[str] = []
-        t, e = 0, 0
-        for qubit in args.known_qubits:
-            if qubit in self.target:
-                if t == 0:
-                    if isinstance(self.exponent, Sequence):
-                        e_str = 'e'
-                    else:
-                        e_str = str(self.exponent)
-                    wire_symbols.append(f'ModularExp(t*{self.base}**{e_str} % {self.modulus})')
-                else:
-                    wire_symbols.append('t' + str(t))
-                t += 1
-            if isinstance(self.exponent, Sequence) and qubit in self.exponent:
-                wire_symbols.append('e' + str(e))
-                e += 1
-        return cirq.CircuitDiagramInfo(wire_symbols=tuple(wire_symbols))
+    Input to gate is 2n+1 qubits split into:
+      n+1 qubits for b, 0 <= b < 2^n. The most significant digit is initialized to 0. b+a is saved here.
+      n ancillary qubits initialized to 0. Unchanged by operation.
+    '''
+
+    def __init__(self, n, a):
+        super().__init__()
+        self.n = n
+        self.a = a
+
+    def _num_qubits_(self):
+        return 2 * self.n + 1
+
+    def _circuit_diagram_info_(self, args):
+        return ["Add_b"] * (self.n + 1) + ["Add_anc"] * self.n
+
+    def _decompose_(self, qubits):
+        n = self.n
+        a = helper().integer_to_bits(n, self.a)
+        b = qubits[:n]
+        anc = qubits[n + 1:] + (qubits[n],)  # internally, b[n] is placed in anc[n]
+
+        ## In forward pass, store carried bits in ancilla.
+        for i in range(n):
+            if a[i]:
+                yield cirq.CNOT(b[i], anc[i + 1])
+                yield cirq.X(b[i])
+            yield cirq.TOFFOLI(anc[i], b[i], anc[i + 1])
+        yield cirq.CNOT(anc[n - 1], b[n - 1])
+        ## In backward pass, undo carries, then add a and carries to b.
+        for i in range(n - 2, -1, -1):
+            yield cirq.TOFFOLI(anc[i], b[i], anc[i + 1])
+            if a[i]:
+                yield cirq.X(b[i])
+                yield cirq.CNOT(b[i], anc[i + 1])
+                yield cirq.X(b[i])
+            yield cirq.CNOT(anc[i], b[i])
+
+
+class MAdd(cirq.Gate):
+    '''Add classical integer a to qubit b, modulo N. Integers a and b must be less
+    than N for correct behavior. Uses O(n) elementary gates.
+
+      |b> --> |b+a mod N>
+
+    Parameters:
+      n: number of qubits.
+      a: integer, 0 <= a < N.
+      N: integer, 1 < N < 2^n.
+
+    Input to gate is 2n+2 qubits split into:
+      n qubits for b, 0 <= b < N. a+b mod N is saved here.
+      n+2 ancillary qubits initialized to 0. Unchanged by operation.
+    '''
+
+    def __init__(self, n, a, N):
+        super().__init__()
+        self.n = n
+        self.a = a
+        self.N = N
+
+    def _num_qubits_(self):
+        return 2 * self.n + 2
+
+    def _circuit_diagram_info_(self, args):
+        return ["MAdd_b"] * self.n + ["MAdd_anc"] * (self.n + 2)
+
+    def _decompose_(self, qubits):
+        n = self.n
+        b = qubits[:n + 1]  # extra qubit for overflow
+        anc = qubits[n + 1:2 * n + 1]
+        t = qubits[2 * n + 1]
+
+        Add_a = Add(n, self.a)
+        Add_N = Add(n, self.N)
+        yield Add_a.on(*b, *anc)
+        yield cirq.inverse(Add_N).on(*b, *anc)
+        ## Second register is a+b-N. The most significant digit indicates underflow from subtraction.
+        yield cirq.CNOT(b[n], t)
+        yield Add_N.controlled(1).on(t, *b, *anc)
+        ## To reset t, subtract a from second register. If underflow again, means that t=0 previously.
+        yield cirq.inverse(Add_a).on(*b, *anc)
+        yield cirq.X(b[n])
+        yield cirq.CNOT(b[n], t)
+        yield cirq.X(b[n])
+        yield Add_a.on(*b, *anc)
+
+
+class MMult(cirq.Gate):
+    '''Multiply qubit x by classical integer a, modulo N. Exact map is:
+
+      |x; b> --> |x; b + x*a mod N>
+
+    Integers a, b, and x must be less than N for correct behavior. Uses O(n^2)
+    elementary gates.
+
+    Parameters:
+      n: number of qubits.
+      a: integer, 0 <= a < N.
+      N: integer, 1 < N < 2^n.
+
+    Input to gate is 3n+2 qubits split into:
+      n qubits for x, 0 <= x < N. Unchanged by operation.
+      n qubits for b, 0 <= b < N. b + x*a mod N is saved here.
+      n+2 ancillary qubits initialized to 0. Unchanged by operation.
+    '''
+
+    def __init__(self, n, a, N):
+        super().__init__()
+        self.n = n
+        self.a = a
+        self.N = N
+
+    def _num_qubits_(self):
+        return 3 * self.n + 2
+
+    def _circuit_diagram_info_(self, args):
+        return ["MMult_x"] * self.n + ["MMult_b"] * self.n + ["MMult_anc"] * (self.n + 2)
+
+    def _decompose_(self, qubits):
+        n = self.n
+        N = self.N
+        x = qubits[:n]
+        b = qubits[n:2 * n]
+        anc = qubits[2 * n:]
+
+        ## x*a = 2^(n-1) x_(n-1) a + ... + 2 x_1 a + x_0 a
+        ## so the bits of x control the addition of a * 2^i
+        d = self.a  # stores a * 2^i mod N
+        for i in range(n):
+            yield MAdd(n, d, N).controlled(1).on(x[i], *b, *anc)
+            d = (d << 1) % N
+
+
+class Ua(cirq.Gate):
+    '''Applies the unitary n-qubit operation,
+
+      |x> --> |x*a mod N>
+
+    where gcd(a, N) = 1. Integers a and x must be less than N for correct
+    behavior. Uses O(n^2) elementary gates.
+
+    Parameters:
+      n: number of qubits.
+      a: integer, 0 < a < N and gcd(a, N) = 1.
+      N: integer, 1 < N < 2^n.
+      inv_a: (optional) integer, inverse of a mod N. Skips recalculation of this if provided.
+
+    Input to gate is 3n+2 qubits split into:
+      n qubits for x, 0 <= x < N. x*a mod N is saved here.
+      2n+2 ancillary qubits initialized to 0. Unchanged by operation.
+    '''
+
+    def __init__(self, n, a, N, inv_a=None):
+        super().__init__()
+        self.n = n
+        self.a = a
+        self.N = N
+        if inv_a:
+            self.inv_a = inv_a
+        else:
+            self.inv_a = pow(a, -1, N)
+
+    def _num_qubits_(self):
+        return 3 * self.n + 2
+
+    def _circuit_diagram_info_(self, args):
+        return ["Ua_x"] * self.n + ["Ua_anc"] * (2 * self.n + 2)
+
+    def _decompose_(self, qubits):
+        n = self.n
+        N = self.N
+        x = qubits[:n]
+        anc_mult = qubits[n:2 * n]
+        anc_add = qubits[2 * n:]
+
+        yield MMult(n, self.a, N).on(*x, *anc_mult, *anc_add)
+        for i in range(n):
+            yield cirq.SWAP(x[i], anc_mult[i])
+        yield cirq.inverse(MMult(n, self.inv_a, N)).on(*x, *anc_mult, *anc_add)
+
+
+class MExp(cirq.Gate):
+    '''Multiply qubit x by a^k, modulo N, where a is a classical integer and
+    gcd(a, N) = 1. Integers a and x must be less than N for correct behavior. Uses
+    O(m * n^2) elementary gates.
+
+      |k; x> --> |k; x * a^k mod N>
+
+    Parameters:
+      m: number of qubits for k.
+      n: number of qubits for x.
+      a: integer, 0 < a < N and gcd(a, N) = 1.
+      N: integer, 1 < N < 2^n.
+
+    Input to gate is m+3n+2 qubits split into:
+      m qubits for k, 0 <= k < 2^m. Unchanged by operation.
+      n qubits for x, 0 <= x < N. x * a^k mod N is saved here.
+      2n+2 ancillary qubits initialized to 0. Unchanged by operation.
+    '''
+
+    def __init__(self, m, n, a, N):
+        super().__init__()
+        self.m = m
+        self.n = n
+        self.a = a
+        self.inv_a = pow(a, -1, N)  # inverse of a mod N
+        self.N = N
+
+    def _num_qubits_(self):
+        return self.m + 3 * self.n + 2
+
+    def _circuit_diagram_info_(self, args):
+        return ["MExp_k"] * self.m + ["MExp_x"] * self.n + ["MExp_anc"] * (2 * self.n + 2)
+
+    def _decompose_(self, qubits):
+        m = self.m
+        n = self.n
+        N = self.N
+        k = qubits[:m]
+        x = qubits[m:m + n]
+        anc = qubits[m + n:]
+
+        d = self.a  # stores a^(2^i)
+        inv_d = self.inv_a  # stores a^(-2^i)
+        for i in range(m):
+            yield Ua(n, d, N, inv_d).controlled(1).on(k[i], *x, *anc)
+            d = (d * d) % N
+            inv_d = (inv_d * inv_d) % N
 
 class Order:
     def __init__(self, a, N, Threshold = 2):
@@ -160,35 +323,35 @@ class Order:
         self.m = 2 * self.n                 # #qubits to represent order r
         self.table = defaultdict(int)
         # Prepare qubits for phase estimation
-        k = cirq.GridQubit.rect(1, self.m, top=0)
-        x = cirq.GridQubit.rect(1, self.n, top=1)
-        ancillae = cirq.GridQubit.rect(1, self.m + 2, top=2)
+        k = cirq.GridQubit.rect(1, self.m, top=0)                                   # a^k = a^k0 a^2k1 a^4k2 ... a^(2^m-1)km-1
+        x = cirq.GridQubit.rect(1, self.n, top=1)                                   # x = 0, 1, ..., N - 1
+        ancillae = cirq.GridQubit.rect(1, 2*self.n + 2, top=2)                      # ancillary qubits for keeping unitary
 
         # Define operations for phase estimation on Ma
         self.ops = []
-        self.ops.append(helper().load_integer(x, 1))
-        self.ops.append(cirq.H(i) for i in k)
-        self.ops.append(ModularExp(x, k+ancillae, self.a, self.N))
-        self.ops.append(cirq.qft(*k[::-1], inverse=True))
-        self.ops.append(cirq.measure(*k))
+        self.ops.append(helper().load_integer(x, 1))                                # Load 1 to x
+        self.ops.append(cirq.H(i) for i in k)                                       # Apply Hadamard to k
+        self.ops.append(MExp(self.m, self.n, self.a, self.N).on(*k, *x, *ancillae)) # Calculate modular exponentiation
+        self.ops.append(cirq.qft(*k[::-1], inverse=True))                           # Apply quantum Fourier transform
+        self.ops.append(cirq.measure(*k))                                           # Measure k as output
 
         # Build circuit for phase estimation on Ma
         self.circuit = cirq.Circuit(self.ops)
 
     def quantum_order_finder(self):
         while True:
-            result = cirq.Simulator().run(self.circuit, repetitions=1)
+            result = cirq.Simulator().run(self.circuit, repetitions=1)              # Measure k as k/r
             _, bits = result.measurements.popitem()
-            k_over_r = helper().bits_to_integer(bits[0])
+            k_over_r = helper().bits_to_integer(bits[0])                            # Read k/r as integer
             # Uniformly draw from k/r where k=0, 1, ..., r-1.
-            k, r = helper().approximate_fraction(k_over_r, 2 ** self.m, self.N)
+            k, r = helper().approximate_fraction(k_over_r, 2 ** self.m, self.N)     # Obtain order r via approximate fraction
 
-            # Count potential order with a dictionary
-            self.table[k] += 1
-
-            # If this r has been observed {Threshold} times, it's very likely to be the order.
-            if self.table[k] == self.Threshold and pow(self.a, k, self.N) == 1:
-                return k
+            # Count potential order with a dictionary, precluiding of getting 2*r, which is improbable though.
+            self.table[r] += 1
+            print(self.table)
+            # If this r has been observed {Threshold} times, and r is the order we are looking for, output it.
+            if self.table[r] == self.Threshold and pow(self.a, r, self.N) == 1:
+                return r
 
 class Factorization():
     def __init__(self, N, k=40):
@@ -196,7 +359,9 @@ class Factorization():
         self.k = k
 
     def miller_rabin(self):
-        # Returns True if n is a probable prime
+        # Adapted the Miller Rabin Algorithm to check primality from
+        # https://gist.github.com/Ayrx/5884790
+
         if self.N == 2 or self.N == 3:
             return True
         if self.N % 2 == 0:
@@ -225,6 +390,7 @@ class Factorization():
             assert isinstance(self.N, int) and self.N > 0
         except:
             print("Invalid input. Please enter an positive composite integer.")
+        # Handle the input 1, both as original input and recursive input.
         if self.N == 1:
             return 1
 
@@ -236,7 +402,7 @@ class Factorization():
         # If N is a prime number, return 1. Check N's primality with Miller-Rabin primality test.
         if self.miller_rabin(): return self.N
 
-        # Make sure N is not an integer power, othersise outputs the base.
+        # Make sure N is not an integer power, otherwise outputs the base.
         for exp in range(2, int(np.log(self.N)/np.log(3)) + 1):
             base = round(pow(self.N, 1./exp))
             if pow(base, exp) == self.N:
@@ -256,7 +422,7 @@ class Factorization():
         # 3. Call order-finding algorithm to compute a's order r modulo N
         r = Order(a, self.N).quantum_order_finder()
 
-        # 4. If r is even and N | [a^(r/2) - 1] is false, then we find a non-trival divisor
+        # 4. If r is even and N | [a^(r/2) - 1] is false, then try to find a non-trivial divisor
         if r % 2 == 0:
             d = np.gcd(pow(a, r//2, self.N) - 1, self.N)
             if d != 1:
@@ -311,7 +477,19 @@ def test_order_finding(max_n):
     plt.show()
 
 def main():
-    test_order_finding(4)
+    """
+    start = time.time()
+    factorizer = Factorization(15)
+    print(factorizer.interger_factorization())
+
+    how_long_it_took = time.time() - start
+
+    how_long_it_took = "%.3f" % how_long_it_took
+    print("Factorizing " + str(15) + " took " + how_long_it_took + " seconds.")
+    """
+    #test_order_finding(6)
+    order = Order(2, 7)
+    print(order.quantum_order_finder())
 
 if __name__ == '__main__':
     main()
