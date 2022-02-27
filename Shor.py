@@ -1,6 +1,5 @@
 import cirq
 import numpy as np
-from typing import Callable, List, Optional, Sequence, Union
 from collections import defaultdict
 import time
 from matplotlib import pyplot as plt
@@ -348,7 +347,7 @@ class Order:
 
             # Count potential order with a dictionary, precluiding of getting 2*r, which is improbable though.
             self.table[r] += 1
-            print(self.table)
+            #print(self.table)
             # If this r has been observed {Threshold} times, and r is the order we are looking for, output it.
             if self.table[r] == self.Threshold and pow(self.a, r, self.N) == 1:
                 return r
@@ -444,7 +443,7 @@ def test_factorization():
         how_long_it_took = "%.3f" %how_long_it_took
         print("Factorizing " + str(N) + " took " + how_long_it_took + " seconds.")
 
-    plt.plot(use_time, n)
+    plt.plot(n, use_time)
     plt.title("Scalability of Shor's algorithm")
     plt.xlabel('Bits of big integer')
     plt.ylabel('Runtime/s')
@@ -469,7 +468,7 @@ def test_order_finding(max_n):
         how_long_it_took = "%.3f" %how_long_it_took
         print("It took " + how_long_it_took + " seconds.")
 
-    plt.plot(use_time, n)
+    plt.plot(n, use_time)
     plt.title("Scalability of Quantum Order Finder")
     plt.xlabel('Bits of big integer')
     plt.ylabel('Runtime/s')
@@ -487,9 +486,9 @@ def main():
     how_long_it_took = "%.3f" % how_long_it_took
     print("Factorizing " + str(15) + " took " + how_long_it_took + " seconds.")
     """
-    #test_order_finding(6)
-    order = Order(2, 7)
-    print(order.quantum_order_finder())
+    test_order_finding(2)
+    #order = Order(2, 7)
+    #print(order.quantum_order_finder())
 
 if __name__ == '__main__':
     main()
