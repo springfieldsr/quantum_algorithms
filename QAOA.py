@@ -31,13 +31,21 @@ def qaoa_circuit(n, gamma, beta, clauses):
     
     # Sep(gamma)
     for x1, x2 in clauses:
+        if x1 + x2 == 0:                                                                # Special case when a clause contains one literal with opposite signs
+            yield P1(qubits[-1])
+            continue
         if x1 < 0:                                                                      # If literal is negative in current clause
             yield cirq.X(qubits[abs(x1) - 1])                                           # then negate it
         if x2 < 0:
-            yield cirq.X(qubits[abs(x2) - 1])
+            yield cirq.X(qubits[abs(x2) - 1])            
         yield P1(qubits[-1]).controlled_by(qubits[abs(x1) - 1])                         # Shift up if current state satisfies this clause
         yield P1(qubits[-1]).controlled_by(qubits[abs(x2) - 1])                         # Shift up if current state satisfies this clause
-        yield P2(qubits[-1]).controlled_by(qubits[abs(x1) - 1], qubits[abs(x2) - 1])    # Shift down if both qubits satisfy this clause
+
+        # Shift down if both qubits satisfy this clause
+        if abs(x1) != abs(x2):
+            yield P2(qubits[-1]).controlled_by(qubits[abs(x1) - 1], qubits[abs(x2) - 1])
+        else:
+            yield P2(qubits[-1]).controlled_by(qubits[abs(x1) - 1])
 
         if x1 < 0:                              # Negate back if literals are negative
             yield cirq.X(qubits[abs(x1) - 1])
@@ -52,7 +60,7 @@ def qaoa_circuit(n, gamma, beta, clauses):
         yield cirq.measure(qubits[i])
 
 
-def QAOA(n_lit, t, n_trials, clauses):
+def QAOA(n_lit, t, n_trials, clauses, verbose=False):
     simulator = Simulator()
     max_count = 0
     candidate = None
@@ -72,10 +80,12 @@ def QAOA(n_lit, t, n_trials, clauses):
         if count > max_count:
             max_count = count
             candidate = measurements
-    print("For clauses:")
-    print(clauses)
-    if max_count >= t:
-        print("Found a satisfying literal string, " + "".join([str(i) for i in candidate]))
-    else:
-        print("After {} trials no satisfying literal string found.".format(n_trials))
+            if max_count >= t: break
+    if verbose:
+        print("For clauses:")
+        print(clauses)
+        if max_count >= t:
+            print("Found a satisfying literal string, " + "".join([str(i) for i in candidate]))
+        else:
+            print("After {} trials no satisfying literal string found.".format(n_trials))
     return max_count >= t

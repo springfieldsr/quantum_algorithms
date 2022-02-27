@@ -168,10 +168,29 @@ def QAOA_random_test(n_max_literals, number_of_tests):
             literal_set.add(abs(x2))
         n_literals = len(literal_set)                                       # Get number of literals in clauses
 
-        #TODO: find the upper bound of satisfiable clauses
-        t = random.randint(5, 15)
+        literals = list(literal_set)
+        mapping = {literals[i]: i + 1 for i in range(n_literals)}
+        for i in range(n_clauses):
+            x1, x2 = clauses[i][0], clauses[i][1]
+            clauses[i] = (mapping[abs(x1)] * x1 // x1, mapping[abs(x2)] * x2 // x2)
+        t = 0
+        for i in range(2 ** n_literals):
+            binary = "{0:b}".format(i)
+            padding = "0" * (n_literals - len(binary))
+            binary = padding + binary
+            string = []
+            for j in range(n_literals):
+                if binary[j] == '0':
+                    string.append(-1 * literals[j])
+                else:
+                    string.append(literals[j])
+            count = 0
+            for x1, x2 in clauses:
+                if x1 in string or x2 in string:
+                    count += 1
+            t = max(count ,t)
         try:
-            assert QAOA(n_literals, t, 20, clauses)
+            assert QAOA(n_literals, t, 200, clauses)
         except:
             print("QAOA Test Failed. Returning the failed test case function...")
             print(clauses)
@@ -207,7 +226,11 @@ def main():
     print("Grover Testing:")
     for n_bits in tqdm(range(2, 20)):
         grover_random_test(n_bits, num_tests)
-
+    
+    print("==================================")
+    print("QAOA Testing:")
+    for n_bits in tqdm(range(5, 10)):
+        QAOA_random_test(n_bits, num_tests)    
 
 if __name__ == '__main__':
     main()
