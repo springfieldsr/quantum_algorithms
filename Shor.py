@@ -1,5 +1,6 @@
 import cirq
 import numpy as np
+from typing import Callable, List, Optional, Sequence, Union
 from collections import defaultdict
 import time
 from matplotlib import pyplot as plt
@@ -347,7 +348,7 @@ class Order:
 
             # Count potential order with a dictionary, precluiding of getting 2*r, which is improbable though.
             self.table[r] += 1
-            #print(self.table)
+            print(self.table)
             # If this r has been observed {Threshold} times, and r is the order we are looking for, output it.
             if self.table[r] == self.Threshold and pow(self.a, r, self.N) == 1:
                 return r
@@ -452,22 +453,26 @@ def test_factorization():
 
 def test_order_finding(max_n):
     use_time = []
-    n = np.arange(2, max_n + 1)                 # #bits to represent N
+    n = []                                      # #bits to represent N
     for i in range(2, max_n + 1):               # from 2 to max_n bits
-        N = 2 ** i - 1
-        while True:
+        N = 2 ** i - 1                          # N is the all-one i bits binary number
+        while True:                             # Randomly generate a, such that
             a = np.random.randint(2, N)         # 1 < a < N
-            if np.gcd(a, N) ==  1:              # gcd(a, N) == 1
+            if np.gcd(a, N) ==  1:              # and gcd(a, N) == 1
                 break
         start = time.time()
         order = Order(a, N)
-        print("Quantum order finder found the order of " + str(a) + " modulo " + str(N))
-        print(order.quantum_order_finder())
-        how_long_it_took = time.time() - start
-        use_time.append(how_long_it_took)
-        how_long_it_took = "%.3f" %how_long_it_took
-        print("It took " + how_long_it_took + " seconds.")
-
+        try:
+            print(order.quantum_order_finder())
+            print("Quantum order finder found the order of " + str(a) + " modulo " + str(N))
+            how_long_it_took = time.time() - start
+            use_time.append(how_long_it_took)
+            n.append(i)
+            how_long_it_took = "%.3f" %how_long_it_took
+            print("It took " + how_long_it_took + " seconds.")
+        except:
+            print("When finding order of a "+ str(i) + " bits number, it runs out of RAM!")
+            break
     plt.plot(n, use_time)
     plt.title("Scalability of Quantum Order Finder")
     plt.xlabel('Bits of big integer')
@@ -476,19 +481,14 @@ def test_order_finding(max_n):
     plt.show()
 
 def main():
-    """
-    start = time.time()
-    factorizer = Factorization(15)
-    print(factorizer.interger_factorization())
+    # Test quantum order finder, one input is the maximum bits to represent N. a is randomly generated from
+    # (1, N). Test function can automatically deal with crash due to running out of memory.
+    test_order_finding(6)
 
-    how_long_it_took = time.time() - start
-
-    how_long_it_took = "%.3f" % how_long_it_took
-    print("Factorizing " + str(15) + " took " + how_long_it_took + " seconds.")
-    """
-    test_order_finding(2)
-    #order = Order(2, 7)
-    #print(order.quantum_order_finder())
+    # Test the entire integer factorization algorithm. We pick 3 integers that are worth of factorization inside
+    # the function. It can take a really long time to factorize even a small integer, but sometimes it's a lot faster
+    # when the classical algorithm luckily picks its factor.
+    test_factorization()
 
 if __name__ == '__main__':
     main()
