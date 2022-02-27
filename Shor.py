@@ -68,7 +68,7 @@ class helper:
         return a1, b1
 
 
-# Here we borrow 4 Quantum gates for arithmetic from
+# Here we borrow 4 Quantum gates for arithmetic operation from
 # https://github.com/kevinddchen/Cirq-PrimeFactorization/blob/main/arithmetic.py
 # The implementation is based on https://arxiv.org/abs/quant-ph/9511018.
 
