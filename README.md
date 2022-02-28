@@ -1,3 +1,37 @@
+
+# QAOA
+The purpose of this is to solve max2sat problem using QAOA on a quantum simulator supported by cirq, given a clause.
+The implementation of QAOA involve only:
+* QAOA.py
+
+This file contains both classical and quantum solver, random test generator and test function. Solver operates independant of other files but python lib especially cirq. 
+The target function, named QAOA, accepts 5 inputs:
+* $n_lit$, number of literals in integer
+* $t$, minimum number of clauses to satisfy in integer
+* $n_trials$, maximum number of trials before abort in integer
+* $clauses$, clause in a tuple array, each tuple consists 2 literals, literals being integer
+* $verbose$, default false, should set to true if one wants to see the output of QAOA printed
+
+The function outputs the result of max2sat problem by printing binary string value, when verbose is set to true.
+
+# Shor
+The purpose of this is to quantumly factor a given number N, using shor algorithm.
+The implementation of QAOA involve only:
+* Shor.py
+
+This file contains both classical factorization methods and shor algorithm using cirq circuits, random test generator and test function.
+
+The target function is encapsulated in a class called Factorization. To factorize an input integer N, an example code is:
+factorizer = Factorization(N)
+print(factorizer.integer_factorization())
+
+Here integer_factorization() function will perform condition checking and feed inputs into shor algorithm and print output.
+
+For a prime number checker, we used the Miller Rabin Algorithm: https://gist.github.com/Ayrx/5884790
+For relative arithmetic quantum gates, especially modulo exponential gate, we used some arithmetic gates implementation: https://github.com/kevinddchen/Cirq-PrimeFactorization/blob/main/arithmetic.py
+For reference of the implementation, the following resource are used: https://arxiv.org/abs/quant-ph/9511018
+
+# Below are the readme for last submission 
 # Four Quantum Algorithm Solvers  
 
 This project uses Cirq to simulate the implementation of four well known quantum algorithms:  
