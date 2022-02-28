@@ -436,10 +436,10 @@ def test_factorization():
     use_time = []
     for N in Ns:
         start = time.time()
-        factorizer = Factorization(N)
+        factorizer = Factorization(N)           # Instantiate the circuit
         print(factorizer.interger_factorization())
 
-        how_long_it_took = time.time() - start
+        how_long_it_took = time.time() - start  # Calculate runtime
         use_time.append(how_long_it_took)
         how_long_it_took = "%.3f" %how_long_it_took
         print("Factorizing " + str(N) + " took " + how_long_it_took + " seconds.")
@@ -462,7 +462,7 @@ def test_order_finding(max_n):
                 break
         start = time.time()
         order = Order(a, N)
-        try:
+        try:                                    # For the purpose of automatic test, allow for any max_n. Thus, it may run out of RAM
             print(order.quantum_order_finder())
             print("Quantum order finder found the order of " + str(a) + " modulo " + str(N))
             how_long_it_took = time.time() - start
@@ -483,7 +483,7 @@ def test_order_finding(max_n):
 def main():
     # Test quantum order finder, one input is the maximum bits to represent N. a is randomly generated from
     # (1, N). Test function can automatically deal with crash due to running out of memory.
-    test_order_finding(6)
+    test_order_finding(7)
 
     # Test the entire integer factorization algorithm. We pick 3 integers that are worth of factorization inside
     # the function. It can take a really long time to factorize even a small integer, but sometimes it's a lot faster
