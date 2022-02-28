@@ -22,14 +22,14 @@ The implementation of QAOA involve only:
 This file contains both classical factorization methods and shor algorithm using cirq circuits, random test generator and test function.
 
 The target function is encapsulated in a class called Factorization. To factorize an input integer N, an example code is:
-factorizer = Factorization(N)
-print(factorizer.integer_factorization())
+* factorizer = Factorization(N)
+* print(factorizer.integer_factorization())
 
 Here integer_factorization() function will perform condition checking and feed inputs into shor algorithm and print output.
 
-For a prime number checker, we used the Miller Rabin Algorithm: https://gist.github.com/Ayrx/5884790
-For relative arithmetic quantum gates, especially modulo exponential gate, we used some arithmetic gates implementation: https://github.com/kevinddchen/Cirq-PrimeFactorization/blob/main/arithmetic.py
-For reference of the implementation, the following resource are used: https://arxiv.org/abs/quant-ph/9511018
+* For a prime number checker, we used the Miller Rabin Algorithm: https://gist.github.com/Ayrx/5884790
+* For relative arithmetic quantum gates, especially modulo exponential gate, we used some arithmetic gates implementation: https://github.com/kevinddchen/Cirq-PrimeFactorization/blob/main/arithmetic.py
+* For reference of the implementation, the following resource are used: https://arxiv.org/abs/quant-ph/9511018
 
 # Below are the readme for last submission 
 # Four Quantum Algorithm Solvers  
