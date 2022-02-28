@@ -1,7 +1,8 @@
 import cirq
 import numpy as np
 from cirq import Simulator
-
+from tqdm import tqdm
+import random
 
 # Create the phaseshift gate
 class PhaseShift(cirq.Gate):
@@ -89,3 +90,66 @@ def QAOA(n_lit, t, n_trials, clauses, verbose=False):
         else:
             print("After {} trials no satisfying literal string found.".format(n_trials))
     return max_count >= t
+
+def QAOA_random_test(n_max_literals, number_of_tests):
+    n_failed = 0
+    for _ in range(number_of_tests):
+        literals = list(range(1, n_max_literals + 1))
+        n_clauses = random.randint(10, 30)                                  # Randomly choose clause length
+        clauses = []
+        literal_set = set()
+        for _ in range(n_clauses):                                          # Randomly create list of clauses
+            sign1, sign2 = random.choice([-1, 1]), random.choice([-1, 1])
+            x1 = random.choice(literals) * sign1
+            x2 = random.choice(literals) * sign2
+            clauses.append((x1, x2))
+
+            literal_set.add(abs(x1))
+            literal_set.add(abs(x2))
+        n_literals = len(literal_set)                                       # Get number of literals in clauses
+
+        literals = list(literal_set)
+        mapping = {literals[i]: i + 1 for i in range(n_literals)}
+        for i in range(n_clauses):
+            x1, x2 = clauses[i][0], clauses[i][1]
+            clauses[i] = (mapping[abs(x1)] * x1 // x1, mapping[abs(x2)] * x2 // x2)
+        t = 0
+        for i in range(2 ** n_literals):
+            binary = "{0:b}".format(i)
+            padding = "0" * (n_literals - len(binary))
+            binary = padding + binary
+            string = []
+            for j in range(n_literals):
+                if binary[j] == '0':
+                    string.append(-1 * literals[j])
+                else:
+                    string.append(literals[j])
+            count = 0
+            for x1, x2 in clauses:
+                if x1 in string or x2 in string:
+                    count += 1
+            t = max(count ,t)
+        try:
+            assert QAOA(n_literals, t, 200, clauses)
+        except:
+            print("QAOA Test Failed. Returning the failed test case function...")
+            print(clauses)
+            n_failed += 1
+    
+    if n_failed == 0:
+        print("QAOA Solver all clear for {} tests.".format(number_of_tests))
+    else:
+        print("QAOA solver failed {} times".format(n_failed))
+    return n_failed
+
+
+
+def main():
+    num_tests = 25
+
+    print("QAOA Testing:")
+    for n_bits in tqdm(range(5, 10)):
+        QAOA_random_test(n_bits, num_tests)    
+
+if __name__ == '__main__':
+    main()
