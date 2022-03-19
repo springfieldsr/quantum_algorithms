@@ -1,0 +1,11 @@
+
+1bits answer: 0
+2bits answer: 3
+3bits answer: 6
+4bits answer: 13
+5bits answer: 12
+6bits answer: 2
+7bits answer: 122
+8bits answer: 220
+9bits answer: 120
+10bits answer: 187

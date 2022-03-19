@@ -430,7 +430,7 @@ class Factorization():
         # 5. Repeat the algorithm, until an factor is found
         return self.shor()
 
-def test_factorization():
+"""def test_factorization():
     Ns = [6, 15, 21]                            # Big prime number products
     n = [3, 4, 5]                               # #qubits to represent N
     use_time = []
@@ -492,5 +492,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+"""
 
 

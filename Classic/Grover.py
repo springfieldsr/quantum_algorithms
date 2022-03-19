@@ -89,4 +89,3 @@ class Grover:
 
     def bitstring(self, bits):
         return ''.join(str(int(b)) for b in bits)
-

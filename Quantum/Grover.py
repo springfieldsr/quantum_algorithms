@@ -18,13 +18,13 @@ class Grover:
 
     def grover_solver(self):
         # Set up input and output qubits.
-        (input_qubits, output_qubit) = self.set_io_qubits()
+        (input_qubits, output_qubit, free) = self.set_io_qubits()
 
         # Make oracle (black box)
-        oracle = self.make_oracle(input_qubits, output_qubit)
+        oracle = self.make_oracle(input_qubits, output_qubit, free)
 
         # Embed the oracle into a quantum circuit implementing Grover's algorithm.
-        _ = self.make_grover_circuit(input_qubits, output_qubit, oracle)
+        _ = self.make_grover_circuit(input_qubits, output_qubit, free, oracle)
 
         # Sample from the circuit a couple times.
         simulator = cirq.Simulator()
@@ -35,7 +35,7 @@ class Grover:
         most_common_bitstring = frequencies.most_common(1)[0][0]
         return most_common_bitstring
 
-    def make_grover_circuit(self, input_qubits, output_qubit, oracle):
+    def make_grover_circuit(self, input_qubits, output_qubit, free, oracle):
         """Find the value recognized by the oracle in sqrt(N) attempts."""
         # For 2 input qubits, that means using Grover operator only once.
         self.circuit.append(
@@ -48,12 +48,14 @@ class Grover:
 
         for _ in range(self.number_of_runs):
             # Query oracle.
-            self.circuit.append(self.make_oracle(input_qubits, output_qubit))
+            self.circuit.append(self.make_oracle(input_qubits, output_qubit, free))
 
             # Construct Grover operator.
             self.circuit.append(cirq.H.on_each(*input_qubits))
             self.circuit.append(cirq.X.on_each(*input_qubits))
-            cnX = X.controlled(self.n).on(*input_qubits[:self.n], output_qubit)
+            # cnX = X.controlled(self.n).on(*input_qubits[:self.n], output_qubit)
+
+            cnX = cirq.optimizers.decompose_multi_controlled_x(input_qubits[:self.n], output_qubit, free)
             self.circuit.append(cnX)
             self.circuit.append(cirq.X.on_each(*input_qubits))
 
@@ -62,7 +64,7 @@ class Grover:
         self.circuit.append(cirq.measure(*input_qubits, key='result'))
         return
 
-    def make_oracle(self, input_qubits, output_qubit):
+    def make_oracle(self, input_qubits, output_qubit, free):
         """Implement function {f(x) = 1 if x==x', f(x) = 0 if x!= x'}."""
         # Make oracle.
         # for (1, 1) it's just a Toffoli gate
@@ -75,7 +77,8 @@ class Grover:
                 for j in range(self.n):
                     x_bits[j] = int(answer[j])
                 break
-        cnX = X.controlled(self.n).on(*input_qubits[:self.n], output_qubit)
+        #cnX = X.controlled(self.n).on(*input_qubits[:self.n], output_qubit)
+        cnX = cirq.optimizers.decompose_multi_controlled_x(input_qubits[:self.n], output_qubit, free)
 
         yield (cirq.X(q) for (q, bit) in zip(input_qubits, x_bits) if not bit)
         yield cnX
@@ -85,8 +88,8 @@ class Grover:
         """Add the specified number of input and output qubits."""
         input_qubits = [cirq.GridQubit(i, 0) for i in range(self.n)]
         output_qubit = cirq.GridQubit(self.n, 0)
-        return (input_qubits, output_qubit)
+        free = [cirq.GridQubit(self.n+1, 0)]
+        return (input_qubits, output_qubit, free)
 
     def bitstring(self, bits):
         return ''.join(str(int(b)) for b in bits)
-

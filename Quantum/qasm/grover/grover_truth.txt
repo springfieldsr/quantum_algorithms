@@ -1,0 +1,9 @@
+/n2bits answer: 1
+3bits answer: 1
+4bits answer: 6
+5bits answer: 10
+6bits answer: 56
+7bits answer: 92
+8bits answer: 14
+9bits answer: 89
+10bits answer: 623
