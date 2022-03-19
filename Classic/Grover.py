@@ -13,6 +13,8 @@ class Grover:
             self.number_of_runs += 1
 
         self.f = function
+        self.circuit = cirq.Circuit()
+
 
     def grover_solver(self):
         # Set up input and output qubits.
@@ -22,11 +24,11 @@ class Grover:
         oracle = self.make_oracle(input_qubits, output_qubit)
 
         # Embed the oracle into a quantum circuit implementing Grover's algorithm.
-        circuit = self.make_grover_circuit(input_qubits, output_qubit, oracle)
+        _ = self.make_grover_circuit(input_qubits, output_qubit, oracle)
 
         # Sample from the circuit a couple times.
         simulator = cirq.Simulator()
-        result = simulator.run(circuit,repetitions=100)
+        result = simulator.run(self.circuit,repetitions=100)
         frequencies = result.histogram(key='result', fold_func=self.bitstring)
 
         # Check if we actually found the secret value.
@@ -36,8 +38,7 @@ class Grover:
     def make_grover_circuit(self, input_qubits, output_qubit, oracle):
         """Find the value recognized by the oracle in sqrt(N) attempts."""
         # For 2 input qubits, that means using Grover operator only once.
-        c = cirq.Circuit()
-        c.append(
+        self.circuit.append(
             [
                 cirq.H(output_qubit),
                 cirq.Z(output_qubit),
@@ -47,19 +48,19 @@ class Grover:
 
         for _ in range(self.number_of_runs):
             # Query oracle.
-            c.append(self.make_oracle(input_qubits, output_qubit))
+            self.circuit.append(self.make_oracle(input_qubits, output_qubit))
 
             # Construct Grover operator.
-            c.append(cirq.H.on_each(*input_qubits))
-            c.append(cirq.X.on_each(*input_qubits))
+            self.circuit.append(cirq.H.on_each(*input_qubits))
+            self.circuit.append(cirq.X.on_each(*input_qubits))
             cnX = X.controlled(self.n).on(*input_qubits[:self.n], output_qubit)
-            c.append(cnX)
-            c.append(cirq.X.on_each(*input_qubits))
+            self.circuit.append(cnX)
+            self.circuit.append(cirq.X.on_each(*input_qubits))
 
-            c.append(cirq.H.on_each(*input_qubits))
+            self.circuit.append(cirq.H.on_each(*input_qubits))
         # Measure the result.
-        c.append(cirq.measure(*input_qubits, key='result'))
-        return c
+        self.circuit.append(cirq.measure(*input_qubits, key='result'))
+        return
 
     def make_oracle(self, input_qubits, output_qubit):
         """Implement function {f(x) = 1 if x==x', f(x) = 0 if x!= x'}."""
