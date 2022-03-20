@@ -4,27 +4,9 @@ from cirq import Simulator
 from tqdm import tqdm
 import random
 
-# Create the phaseshift gate
-class PhaseShift(cirq.Gate):
-    def __init__(self, gamma):
-        super(PhaseShift, self)
-        self.gamma = gamma
-    
-    def _num_qubits_(self):
-        return 1
-
-    def _unitary_(self):
-        mat = np.array([[1, 0], [0, np.exp(1j * self.gamma)]])
-        return mat
-
-    def _circuit_diagram_info_(self):
-        return "P"
-
 
 def qaoa_circuit(n, gamma, beta, clauses):
     qubits = cirq.LineQubit.range(n + 1)        # Add helper qubit
-    P1 = PhaseShift(gamma)                      # Gate to shift up
-    P2 = PhaseShift(-1 * gamma)                 # Gate to shift down
 
     yield cirq.X(qubits[-1])                    # Flip the helper bit to be 1
     for i in range(n):
@@ -33,20 +15,21 @@ def qaoa_circuit(n, gamma, beta, clauses):
     # Sep(gamma)
     for x1, x2 in clauses:
         if x1 + x2 == 0:                                                                # Special case when a clause contains one literal with opposite signs
-            yield P1(qubits[-1])
+            yield cirq.ZPowGate(exponent=-1 * gamma)(qubits[-1])
             continue
         if x1 < 0:                                                                      # If literal is negative in current clause
             yield cirq.X(qubits[abs(x1) - 1])                                           # then negate it
         if x2 < 0:
             yield cirq.X(qubits[abs(x2) - 1])            
-        yield P1(qubits[-1]).controlled_by(qubits[abs(x1) - 1])                         # Shift up if current state satisfies this clause
-        yield P1(qubits[-1]).controlled_by(qubits[abs(x2) - 1])                         # Shift up if current state satisfies this clause
+
+        yield cirq.ZPowGate(exponent=-1 * gamma)(qubits[-1]).controlled_by(qubits[abs(x1) - 1])
+        yield cirq.ZPowGate(exponent=-1 * gamma)(qubits[-1]).controlled_by(qubits[abs(x2) - 1]) 
 
         # Shift down if both qubits satisfy this clause
         if abs(x1) != abs(x2):
-            yield P2(qubits[-1]).controlled_by(qubits[abs(x1) - 1], qubits[abs(x2) - 1])
+            yield cirq.ZPowGate(exponent=gamma)(qubits[-1]).controlled_by(qubits[abs(x1) - 1], qubits[abs(x2) - 1])
         else:
-            yield P2(qubits[-1]).controlled_by(qubits[abs(x1) - 1])
+            yield cirq.ZPowGate(exponent=gamma)(qubits[-1]).controlled_by(qubits[abs(x1) - 1])
 
         if x1 < 0:                              # Negate back if literals are negative
             yield cirq.X(qubits[abs(x1) - 1])
@@ -69,7 +52,6 @@ def QAOA(n_lit, t, n_trials, clauses, verbose=False):
         gamma, beta = np.random.uniform(0, 2 * np.pi), np.random.uniform(0, np.pi)              # Randomly pick gamma and beta
         circuit = cirq.Circuit(qaoa_circuit(n_lit, gamma, beta, clauses))                       # Create circuit
         result = simulator.run(circuit)                                                         # Obtain results after meansurement
-
         measurements = result.data.values.tolist()[0]
         count = 0
         for x1, x2 in clauses:                                                                  # Calculate how many clauses current string satisfies
@@ -90,6 +72,7 @@ def QAOA(n_lit, t, n_trials, clauses, verbose=False):
         else:
             print("After {} trials no satisfying literal string found.".format(n_trials))
     return max_count >= t
+
 
 def QAOA_random_test(n_max_literals, number_of_tests):
     n_failed = 0
@@ -112,7 +95,7 @@ def QAOA_random_test(n_max_literals, number_of_tests):
         mapping = {literals[i]: i + 1 for i in range(n_literals)}
         for i in range(n_clauses):
             x1, x2 = clauses[i][0], clauses[i][1]
-            clauses[i] = (mapping[abs(x1)] * x1 // x1, mapping[abs(x2)] * x2 // x2)
+            clauses[i] = (mapping[abs(x1)] * abs(x1) // x1, mapping[abs(x2)] * abs(x2) // x2)
         t = 0
         for i in range(2 ** n_literals):
             binary = "{0:b}".format(i)
@@ -142,6 +125,51 @@ def QAOA_random_test(n_max_literals, number_of_tests):
         print("QAOA solver failed {} times".format(n_failed))
     return n_failed
 
+
+def QAOA_to_QASM(n_max_literals):
+    literals = list(range(1, n_max_literals + 1))
+    n_clauses = random.randint(10, 20)                                  # Randomly choose clause length
+    clauses = []
+    literal_set = set()
+    for _ in range(n_clauses):                                          # Randomly create list of clauses
+        sign1, sign2 = random.choice([-1, 1]), random.choice([-1, 1])
+        x1 = random.choice(literals) * sign1
+        x2 = random.choice(literals) * sign2
+        clauses.append((x1, x2))
+
+        literal_set.add(abs(x1))
+        literal_set.add(abs(x2))
+    n_literals = len(literal_set)                                       # Get number of literals in clauses
+
+    literals = list(literal_set)
+    mapping = {literals[i]: i + 1 for i in range(n_literals)}
+    for i in range(n_clauses):
+        x1, x2 = clauses[i][0], clauses[i][1]
+        clauses[i] = (mapping[abs(x1)] * abs(x1) // x1, mapping[abs(x2)] * abs(x2) // x2)
+
+    t = 0
+    candidate = None
+    for i in range(2 ** n_literals):
+        binary = "{0:b}".format(i)
+        padding = "0" * (n_literals - len(binary))
+        binary = padding + binary
+        string = []
+        for j in range(n_literals):
+            if binary[j] == '0':
+                string.append(-1 * literals[j])
+            else:
+                string.append(literals[j])
+        count = 0
+        for x1, x2 in clauses:
+            if x1 in string or x2 in string:
+                count += 1
+        if count > t:
+            candidate = binary
+            t = count
+    gamma, beta = np.random.uniform(0, 2 * np.pi), np.random.uniform(0, np.pi)              # Randomly pick gamma and beta
+    circuit = cirq.Circuit(qaoa_circuit(n_literals, gamma, beta, clauses))                       # Create circuit
+    with open('QAOA.qasm', 'w') as f:
+        f.write(circuit.to_qasm(header=str(clauses) + candidate + " " + str(t)))
 
 
 def main():
