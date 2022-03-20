@@ -31,10 +31,13 @@ class Shor_Test:
                 break
 
     def write_qasm_file(self, number_of_bits, number_of_tests):
+
         for i in range(2, number_of_bits +1):
             self.pre_process(i)
             for j in range(len(self.circuits)):
-                qasm_str = self.circuits[j].to_qasm()
+                circuit = self.circuits[j]
+                print(circuit)
+                qasm_str = circuit.to_qasm()
                 with open(self.path + '\shor_' + str(i) + 'bits_' + str(j) + 'test.qasm', 'w') as f:
                     f.write(qasm_str)
             self.circuits.clear()
@@ -45,4 +48,4 @@ path = 'qasm/shor'
 if not os.path.exists(path):
     os.mkdir(path)
 tester = Shor_Test(path)
-tester.write_qasm_file(5,1)
+tester.write_qasm_file(2,1)

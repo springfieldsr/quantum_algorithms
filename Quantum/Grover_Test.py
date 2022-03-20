@@ -41,7 +41,7 @@ class Grover_Test:
         with open(self.path + '\grover_answer.txt', 'w') as g:
             g.write('\n')
             g.close()
-        for i in range(1, number_of_bits+1):
+        for i in range(2, number_of_bits+1):
             self.pre_process(i, number_of_tests)
             for j in range(len(self.circuits)):
                 qasm_str = self.circuits[j].to_qasm()

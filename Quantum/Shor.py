@@ -334,7 +334,6 @@ class Order:
         self.ops.append(MExp(self.m, self.n, self.a, self.N).on(*k, *x, *ancillae)) # Calculate modular exponentiation
         self.ops.append(cirq.qft(*k[::-1], inverse=True))                           # Apply quantum Fourier transform
         self.ops.append(cirq.measure(*k))                                           # Measure k as output
-
         # Build circuit for phase estimation on Ma
         self.circuit = cirq.Circuit(self.ops)
 

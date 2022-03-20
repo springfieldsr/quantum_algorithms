@@ -53,7 +53,7 @@ class Grover:
             # Construct Grover operator.
             self.circuit.append(cirq.H.on_each(*input_qubits))
             self.circuit.append(cirq.X.on_each(*input_qubits))
-            # cnX = X.controlled(self.n).on(*input_qubits[:self.n], output_qubit)
+            #cnX = X.controlled(self.n).on(*input_qubits[:self.n], output_qubit)
 
             cnX = cirq.optimizers.decompose_multi_controlled_x(input_qubits[:self.n], output_qubit, free)
             self.circuit.append(cnX)
@@ -77,7 +77,7 @@ class Grover:
                 for j in range(self.n):
                     x_bits[j] = int(answer[j])
                 break
-        #cnX = X.controlled(self.n).on(*input_qubits[:self.n], output_qubit)
+        # cnX = X.controlled(self.n).on(*input_qubits[:self.n], output_qubit)
         cnX = cirq.optimizers.decompose_multi_controlled_x(input_qubits[:self.n], output_qubit, free)
 
         yield (cirq.X(q) for (q, bit) in zip(input_qubits, x_bits) if not bit)
@@ -93,3 +93,10 @@ class Grover:
 
     def bitstring(self, bits):
         return ''.join(str(int(b)) for b in bits)
+
+
+answer = 464
+def function(input):
+    return 1 if input == answer else 0
+g = Grover(10,function)
+print(g.grover_solver())
