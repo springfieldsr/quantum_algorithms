@@ -16,5 +16,9 @@ def bernstein_vazirani_solver(f, n):
     measurements = result.data.values.tolist()[0]       # Measure first n qubits and save them to a list, which is the "a" we are looking for
     a = "".join([str(i) for i in measurements])         # Save a as a string
     b = str(f("0"))                                     # Obtain b by calling f with input "0"
-
+    print(measurements)
     return a, b
+
+def BV_to_QASM(f, n):
+    circuit = bernstein_vazirani_circuit(f, n)
+    print(circuit.to_qasm())
