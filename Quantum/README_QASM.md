@@ -27,3 +27,17 @@ from QAOA import QAOA_to_QASM
 QAOA_to_QASM(n_qubits, n_files)  # specify the number of qubits (less than 5 as supported by IBM) and number of QASM files to generate
 ```
 The above method generates **n_files** QASM files with distinct random gamma and beta.
+
+* BV: Bernstein_Vazirani 
+```
+from Bernstein_Vazirani import BV_to_QASM
+BV_to_QASM(n_qubits, f)  # specify n_qubits as number of qubits of problem, and f as the function to solve. It simply prints the cirquit that solves BV problem in qasm format.
+```
+
+* DJ: Deutsch_Jozsa
+```
+from Deutsch_Jozsa import DJ_to_QASM
+DJ_to_QASM(n_qubits, f)  # specify n_qubits as number of qubits of problem, and f as the function to solve. It simply prints the cirquit that solves DJ problem in qasm format.
+```
+
+
