@@ -349,7 +349,7 @@ class Order:
         # Build circuit for phase estimation on Ma
 
         self.circuit = cirq.Circuit(self.ops)
-        self.circuit = self.circuit.with_noise(cirq.depolarize(p=0.01))
+        self.circuit = self.circuit.with_noise(cirq.depolarize(p=0.1))
 
     def quantum_order_finder(self):
         while True:
@@ -496,7 +496,7 @@ def test_order_finding(max_n):
 def main():
     # Test quantum order finder, one input is the maximum bits to represent N. a is randomly generated from
     # (1, N). Test function can automatically deal with crash due to running out of memory.
-    test_order_finding(6)
+    test_order_finding(4)
 
     # Test the entire integer factorization algorithm. We pick 3 integers that are worth of factorization inside
     # the function. It can take a really long time to factorize even a small integer, but sometimes it's a lot faster
