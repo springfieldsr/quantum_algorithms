@@ -5,7 +5,6 @@ import sympy
 from utils import Oracle
 from cirq import Simulator
 
-
 def simon_circuit(f, n):
     qubits = cirq.LineQubit.range(n + n)                        # Create n qubits and n helper qubits
     oracle = Oracle(f, n, n)                                    # Create Uf
