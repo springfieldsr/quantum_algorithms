@@ -4,6 +4,14 @@ from typing import Callable, List, Optional, Sequence, Union
 from collections import defaultdict
 import time
 from matplotlib import pyplot as plt
+from typing import Any, Dict, Sequence, TYPE_CHECKING, Union, Callable
+
+from cirq import ops, protocols, value
+from cirq._doc import document
+
+if TYPE_CHECKING:
+    from typing import Iterable
+    import cirq
 
 class helper:
     # Some functions that help communicate between integer and qubits.
@@ -322,6 +330,10 @@ class Order:
         self.n = int(np.log2(self.N)) + 1   # #qubits to represent N
         self.m = 2 * self.n                 # #qubits to represent order r
         self.table = defaultdict(int)
+
+        # Create a noise model
+        self.noise_model = cirq.NoiseModel.from_noise_model_like(cirq.depolarize(p=0.01))
+
         # Prepare qubits for phase estimation
         k = cirq.GridQubit.rect(1, self.m, top=0)                                   # a^k = a^k0 a^2k1 a^4k2 ... a^(2^m-1)km-1
         x = cirq.GridQubit.rect(1, self.n, top=1)                                   # x = 0, 1, ..., N - 1
@@ -335,7 +347,9 @@ class Order:
         self.ops.append(cirq.qft(*k[::-1], inverse=True))                           # Apply quantum Fourier transform
         self.ops.append(cirq.measure(*k))                                           # Measure k as output
         # Build circuit for phase estimation on Ma
+
         self.circuit = cirq.Circuit(self.ops)
+        self.circuit = self.circuit.with_noise(cirq.depolarize(p=0.01))
 
     def quantum_order_finder(self):
         while True:
@@ -429,7 +443,7 @@ class Factorization():
         # 5. Repeat the algorithm, until an factor is found
         return self.shor()
 
-"""def test_factorization():
+def test_factorization():
     Ns = [6, 15, 21]                            # Big prime number products
     n = [3, 4, 5]                               # #qubits to represent N
     use_time = []
@@ -482,15 +496,14 @@ def test_order_finding(max_n):
 def main():
     # Test quantum order finder, one input is the maximum bits to represent N. a is randomly generated from
     # (1, N). Test function can automatically deal with crash due to running out of memory.
-    test_order_finding(7)
+    test_order_finding(6)
 
     # Test the entire integer factorization algorithm. We pick 3 integers that are worth of factorization inside
     # the function. It can take a really long time to factorize even a small integer, but sometimes it's a lot faster
     # when the classical algorithm luckily picks its factor.
-    test_factorization()
+    #test_factorization()
 
 if __name__ == '__main__':
     main()
-"""
 
 
