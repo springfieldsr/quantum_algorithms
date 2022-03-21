@@ -349,7 +349,7 @@ class Order:
         self.circuit = cirq.Circuit(self.ops)
 
         # Add a noise model to our circuit
-        self.circuit = self.circuit.with_noise(cirq.depolarize(p=0.1))
+        self.circuit = self.circuit.with_noise(cirq.depolarize(p=0.05))
 
     def quantum_order_finder(self):
         while True:
