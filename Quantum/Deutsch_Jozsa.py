@@ -24,11 +24,14 @@ def deutsch_jozsa_circuit(f, n):
 
 def deutsch_jozsa_solver(f, n):
     circuit = deutsch_jozsa_circuit(f, n)                       # For the solver, we firstly build the circuit;
-    print(circuit.to_qasm())
     simulator = Simulator()                                     # Then create a simulator variable;
     result = simulator.run(circuit)                             # Finally run the simulator and save the result
 
     measurements = result.data.values.tolist()[0]               # Transfer the result data to list, for the ease of testing.
     print(measurements)
     return 0 if sum(measurements) == 0 else 1                   # If all qubits are the same, they sum up either to n or 0, and we should output 0.
-                                                                # Otherwise, f is a balanced function and we should outputs 1.
+                                                                # Otherwise, f is a balanced function and we should outputs 1
+
+def DJ_to_QASM(f, n):
+    circuit = deutsch_jozsa_circuit(f, n)
+    print(circuit.to_qasm())
