@@ -115,8 +115,8 @@ def QAOA_random_test(n_max_literals, number_of_tests):
         try:
             assert QAOA(n_literals, t, 200, clauses)
         except:
-            print("QAOA Test Failed. Returning the failed test case function...")
-            print(clauses)
+            #print("QAOA Test Failed. Returning the failed test case function...")
+            #print(clauses)
             n_failed += 1
     
     if n_failed == 0:
@@ -126,9 +126,9 @@ def QAOA_random_test(n_max_literals, number_of_tests):
     return n_failed
 
 
-def QAOA_to_QASM(n_max_literals):
+def QAOA_to_QASM(n_max_literals, n_files):
     literals = list(range(1, n_max_literals + 1))
-    n_clauses = random.randint(10, 20)                                  # Randomly choose clause length
+    n_clauses = random.randint(8, 15)                                  # Randomly choose clause length
     clauses = []
     literal_set = set()
     for _ in range(n_clauses):                                          # Randomly create list of clauses
@@ -166,18 +166,22 @@ def QAOA_to_QASM(n_max_literals):
         if count > t:
             candidate = binary
             t = count
-    gamma, beta = np.random.uniform(0, 2 * np.pi), np.random.uniform(0, np.pi)              # Randomly pick gamma and beta
-    circuit = cirq.Circuit(qaoa_circuit(n_literals, gamma, beta, clauses))                       # Create circuit
-    with open('QAOA.qasm', 'w') as f:
-        f.write(circuit.to_qasm(header=str(clauses) + candidate + " " + str(t)))
-
+    
+    for i in range(n_files):
+        gamma, beta = np.random.uniform(0, 2 * np.pi), np.random.uniform(0, np.pi)              # Randomly pick gamma and beta
+        circuit = cirq.Circuit(qaoa_circuit(n_literals, gamma, beta, clauses))                       # Create circuit
+        with open('QAOA_{}.qasm'.format(i), 'w') as f:
+            f.write(circuit.to_qasm(header=str(clauses) + candidate + " " + str(t)))
+    print(clauses)
+    print(candidate)
+    print(t)
 
 def main():
     num_tests = 25
 
     print("QAOA Testing:")
-    for n_bits in tqdm(range(5, 10)):
-        QAOA_random_test(n_bits, num_tests)    
-
+    #for n_bits in tqdm(range(1, 5)):
+    #    QAOA_random_test(n_bits, num_tests)    
+    QAOA_to_QASM(4, 10)
 if __name__ == '__main__':
     main()
