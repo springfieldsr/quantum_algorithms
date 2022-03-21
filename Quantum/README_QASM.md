@@ -8,6 +8,14 @@ In this project, we setup methods to automatically convert Cirq cirquits to QASM
 * QAOA  
   
 For each of these algorithms, a script is provided with easy to use methods for automatic conversion.  
+
+
+* Simon's algorithm:
+Due to some difficulty in decomposing original custom gates, I utilized a new oracle generator **Simon.py**, which easily parses into common gates in qasm files.
+I wrote **Simon_Test** to generate qasm files and its folders.
+
+* Shor's algorithm
+Since we used a self-defined MExp gates, which is a *ControlledOperation* object and can not be decomposed by *to_qasm()*, we decided to test its scalability with cirq simulator by adding noise model to our original circuits. Let the circuit object calls **with_noise()** method and takes **cirq.depolarize()** as its input. We test with various parameter p to see how runtime is affected. This part is covered mainly by Yuchen Liu.
 * QAOA:  
 ```
 from QAOA import QAOA_to_QASM

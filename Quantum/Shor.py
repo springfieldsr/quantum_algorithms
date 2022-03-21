@@ -331,8 +331,6 @@ class Order:
         self.m = 2 * self.n                 # #qubits to represent order r
         self.table = defaultdict(int)
 
-        # Create a noise model
-        self.noise_model = cirq.NoiseModel.from_noise_model_like(cirq.depolarize(p=0.01))
 
         # Prepare qubits for phase estimation
         k = cirq.GridQubit.rect(1, self.m, top=0)                                   # a^k = a^k0 a^2k1 a^4k2 ... a^(2^m-1)km-1
@@ -349,6 +347,8 @@ class Order:
         # Build circuit for phase estimation on Ma
 
         self.circuit = cirq.Circuit(self.ops)
+
+        # Add a noise model to our circuit
         self.circuit = self.circuit.with_noise(cirq.depolarize(p=0.1))
 
     def quantum_order_finder(self):
